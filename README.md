@@ -96,7 +96,7 @@ npm run build
 
 ## Database Design
 
-![Database Design](./images/database.png)
+![Database Design](./images/database.PNG)
 
 ## User Interface Mockup
 
@@ -104,7 +104,7 @@ Here is a mockup of the user interface:
 
 ### Dashboard
 
-![User Interface Mockup](./images/dashboard.png)
+![User Interface Mockup](./images/dashboard.PNG)
 
 ### Login
 
