@@ -1,0 +1,48 @@
+.rbc-header {
+  /* background: #0c356a; */
+  /* color: white; */
+  padding: 10px;
+  font-size: 12px;
+}
+
+.rbc-event {
+  border: none !important;
+  border-radius: 50% !important;
+  width: 2em !important;
+  height: 2em !important;
+  /* Center check icon */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: smaller;
+  text-align: center;
+}
+
+.rbc-day-bg {
+  border: 1px solid whitesmoke;
+}
+
+.rbc-row-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rbc-background-event {
+  padding: 0px !important;
+  border-radius: 0px !important;
+  border: none !important;
+  background-color: transparent !important;
+}
+
+.rbc-event-label {
+  display: none !important;
+}
+
+.rbc-events-container {
+  width: 100% !important;
+}
+
+.rbc-timeslot-group {
+  min-height: 120px !important;
+}
