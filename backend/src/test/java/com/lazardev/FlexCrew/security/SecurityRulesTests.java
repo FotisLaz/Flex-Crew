@@ -7,8 +7,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.lazardev.FlexCrew.controller.AnalyticsController;
@@ -315,5 +317,49 @@ class SecurityRulesTests {
         .perform(delete("/api/schedules/1").header(HttpHeaders.AUTHORIZATION, bearer(admin)))
         .andExpect(status().isNoContent());
     verify(scheduleService).deleteScheduleById(1);
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Projects: reading requires login
+  // ---------------------------------------------------------------------------------------------
+
+  @Test
+  void noToken_readProjects_returns401() throws Exception {
+    mockMvc.perform(get("/api/v1/projects")).andExpect(status().isUnauthorized());
+    verifyNoInteractions(projectService);
+  }
+
+  @Test
+  void noToken_readAssignmentSuggestions_returns401() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/projects/1/assignment-suggestions"))
+        .andExpect(status().isUnauthorized());
+    verifyNoInteractions(projectService);
+  }
+
+  @Test
+  void user_readProjects_returns200() throws Exception {
+    given(projectService.getAllProjects()).willReturn(List.of());
+
+    mockMvc
+        .perform(get("/api/v1/projects").header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isOk());
+  }
+
+  /**
+   * Sending a token makes the browser preflight cross-origin calls. The preflight carries no
+   * token, so it must be answered by CORS before authorization, or the Projects page breaks.
+   */
+  @Test
+  void corsPreflight_forProjectsWithToken_isAllowed() throws Exception {
+    mockMvc
+        .perform(
+            options("/api/v1/projects")
+                .header(HttpHeaders.ORIGIN, "http://localhost:5173")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "authorization"))
+        .andExpect(status().isOk())
+        .andExpect(
+            header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5173"));
   }
 }

@@ -1,5 +1,5 @@
 import { Project, ProjectAssignmentSuggestionDTO, ProjectFormData } from '../types/projectTypes';
-import apiPrivate from './api/apiClient'; 
+import { apiPrivate } from './api/apiClient'; // the client that sends the access token
 
 // Ensure that VITE_API_BASE_URL is treated as unset if it's an empty string, then fallback to /api/v1
 // const envApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
