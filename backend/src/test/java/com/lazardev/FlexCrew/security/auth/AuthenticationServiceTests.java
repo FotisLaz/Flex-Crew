@@ -61,7 +61,6 @@ class AuthenticationServiceTests {
                 .secondSurname("Dev")
                 .email("test.user@example.com")
                 .password("password123")
-                .role(Role.USER)
                 .build();
 
         authRequest = AuthenticationRequest.builder()

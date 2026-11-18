@@ -1,6 +1,5 @@
 package com.lazardev.FlexCrew.security.auth;
 
-import com.lazardev.FlexCrew.entity.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,5 +16,5 @@ public class RegisterRequest {
   private String secondSurname;
   private String email;
   private String password;
-  private Role role;
+  // No role field: self-registration always creates a USER (see AuthenticationService).
 }

@@ -52,7 +52,7 @@ public class AuthenticationService {
         .secondSurname(request.getSecondSurname())
         .email(request.getEmail())
         .password(passwordEncoder.encode(request.getPassword()))
-        .role(request.getRole())
+        .role(Role.USER) // never trust a role from the client
         .build();
 
     Employee savedUser = repository.save(user);
