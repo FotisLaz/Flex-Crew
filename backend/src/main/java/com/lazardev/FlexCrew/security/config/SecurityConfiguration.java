@@ -52,12 +52,6 @@ public class SecurityConfiguration {
         .authorizeHttpRequests(req -> req
             .requestMatchers(WHITE_LIST_URL).permitAll()
             .requestMatchers(HttpMethod.GET, "/api/v1/projects", "/api/v1/projects/**").permitAll()
-            .requestMatchers("/api/v1/management/**").hasAnyRole("ADMIN", "MANAGER")
-            .requestMatchers(HttpMethod.GET, "/api/v1/management/**").hasAnyAuthority("admin:read", "manager:read")
-            .requestMatchers(HttpMethod.POST, "/api/v1/management/**").hasAnyAuthority("admin:create", "manager:create")
-            .requestMatchers(HttpMethod.PUT, "/api/v1/management/**").hasAnyAuthority("admin:update", "manager:update")
-            .requestMatchers(HttpMethod.DELETE, "/api/v1/management/**")
-            .hasAnyAuthority("admin:delete", "manager:delete")
             .anyRequest().authenticated())
         // No login form or HTTP Basic, so tell clients "not authenticated" (401) instead of
         // Spring's fallback 403.
