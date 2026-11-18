@@ -44,6 +44,7 @@ import com.lazardev.FlexCrew.service.EmployeeServiceImpl;
 import com.lazardev.FlexCrew.service.ProjectService;
 import com.lazardev.FlexCrew.service.RecordService;
 import com.lazardev.FlexCrew.service.ScheduleService;
+import com.jayway.jsonpath.JsonPath;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -65,6 +66,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 /**
  * Proves the authorization rules against the REAL security setup: {@link SecurityConfiguration},
@@ -807,5 +809,68 @@ class SecurityRulesTests {
     ArgumentCaptor<Employee> saved = ArgumentCaptor.forClass(Employee.class);
     verify(employeeRepository).save(saved.capture());
     assertNull(saved.getValue().getId());
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Regression guards: these endpoints were already scoped to the caller; keep them that way
+  // ---------------------------------------------------------------------------------------------
+
+  private static String changePasswordJson(String email) {
+    return """
+        {"email":"%s","oldPassword":"%s","newPassword":"new-pass-1234"}"""
+        .formatted(email, PASSWORD);
+  }
+
+  @Test
+  void user_changeOtherEmployeesPassword_returns403() throws Exception {
+    given(employeeRepository.findByEmail(other.getEmail())).willReturn(Optional.of(other));
+
+    mockMvc
+        .perform(
+            put("/api/employees/change-password")
+                .header(HttpHeaders.AUTHORIZATION, bearer(user))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(changePasswordJson(other.getEmail())))
+        .andExpect(status().isForbidden());
+    verify(employeeRepository, never()).save(any(Employee.class));
+  }
+
+  @Test
+  void user_changeOwnPassword_returns200() throws Exception {
+    mockMvc
+        .perform(
+            put("/api/employees/change-password")
+                .header(HttpHeaders.AUTHORIZATION, bearer(user))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(changePasswordJson(user.getEmail())))
+        .andExpect(status().isOk());
+
+    ArgumentCaptor<Employee> saved = ArgumentCaptor.forClass(Employee.class);
+    verify(employeeRepository).save(saved.capture());
+    assertEquals(user.getId(), saved.getValue().getId());
+    assertTrue(passwordEncoder.matches("new-pass-1234", saved.getValue().getPassword()));
+  }
+
+  @Test
+  void refreshToken_onlyAffectsTheTokensOwner() throws Exception {
+    given(employeeRepository.findByEmail(user.getEmail())).willReturn(Optional.of(user));
+    String refreshToken = jwtService.generateRefreshToken(user);
+
+    MvcResult result =
+        mockMvc
+            .perform(
+                post("/api/auth/refresh-token")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + refreshToken))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    String newAccessToken =
+        JsonPath.read(result.getResponse().getContentAsString(), "$.access_token");
+    assertEquals(user.getEmail(), jwtService.extractUsername(newAccessToken));
+    verify(tokenRepository).findAllValidTokenByUser(user.getId());
+    verify(tokenRepository, never()).findAllValidTokenByUser(other.getId());
+    ArgumentCaptor<Token> savedToken = ArgumentCaptor.forClass(Token.class);
+    verify(tokenRepository).save(savedToken.capture());
+    assertEquals(user, savedToken.getValue().getEmployee());
   }
 }
