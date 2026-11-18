@@ -545,4 +545,96 @@ class SecurityRulesTests {
                 .header(HttpHeaders.AUTHORIZATION, bearer(admin)))
         .andExpect(status().isOk());
   }
+
+  // ---------------------------------------------------------------------------------------------
+  // Attendance records: an employee reads only their own; an admin reads anyone's
+  // ---------------------------------------------------------------------------------------------
+
+  @Test
+  void user_readOtherEmployeesRecords_returns403() throws Exception {
+    mockMvc
+        .perform(get("/api/records/3").header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(recordService);
+  }
+
+  @Test
+  void user_readOwnRecords_returns200() throws Exception {
+    given(recordService.findbyEmployeeId(1)).willReturn(List.of());
+
+    mockMvc
+        .perform(get("/api/records/1").header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void admin_readOtherEmployeesRecords_returns200() throws Exception {
+    given(recordService.findbyEmployeeId(3)).willReturn(List.of());
+
+    mockMvc
+        .perform(get("/api/records/3").header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void user_searchOtherEmployeesRecordsByEmail_returns403() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/records/search")
+                .param("employeeEmail", other.getEmail())
+                .header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(recordService);
+  }
+
+  @Test
+  void user_searchOwnRecordsByEmail_returns200() throws Exception {
+    given(recordService.findbyEmployeeEmail(user.getEmail())).willReturn(List.of());
+
+    mockMvc
+        .perform(
+            get("/api/records/search")
+                .param("employeeEmail", user.getEmail())
+                .header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void admin_searchOtherEmployeesRecordsByEmail_returns200() throws Exception {
+    given(recordService.findbyEmployeeEmail(other.getEmail())).willReturn(List.of());
+
+    mockMvc
+        .perform(
+            get("/api/records/search")
+                .param("employeeEmail", other.getEmail())
+                .header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void user_countOtherEmployeesMonthlyRecords_returns403() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/records/searchbymonth")
+                .param("employeeEmail", other.getEmail())
+                .param("month", "5")
+                .param("year", "2025")
+                .header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(recordService);
+  }
+
+  @Test
+  void user_countOwnMonthlyRecords_returns200() throws Exception {
+    given(recordService.findbyEmployeeEmailAndMonth(user.getEmail(), 5, 2025)).willReturn(3);
+
+    mockMvc
+        .perform(
+            get("/api/records/searchbymonth")
+                .param("employeeEmail", user.getEmail())
+                .param("month", "5")
+                .param("year", "2025")
+                .header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isOk());
+  }
 }
