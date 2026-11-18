@@ -60,19 +60,6 @@ class AnalyticsControllerTests {
         }
 
         @Test
-        @WithMockUser // Simulate an authenticated user with default (USER) role
-        void getPunctualityStats_shouldReturnPunctualityDto_whenUserIsAuthenticated() throws Exception {
-                // Assuming the endpoint is now accessible to any authenticated user
-                PunctualityStatsDto punctualityDto = new PunctualityStatsDto(50L, 10L, 5L, 2L, 67L);
-                given(analyticsService.getPunctualityStats()).willReturn(punctualityDto);
-
-                mockMvc.perform(get("/api/v1/analytics/punctuality"))
-                                .andExpect(status().isOk())
-                                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                                .andExpect(jsonPath("$.punctualCount").value(50));
-        }
-
-        @Test
         void getPunctualityStats_shouldReturnUnauthorized_whenUserIsNotAuthenticated() throws Exception {
                 // No @WithMockUser, so request is anonymous
                 PunctualityStatsDto punctualityDto = new PunctualityStatsDto(50L, 10L, 5L, 2L, 67L);
@@ -98,21 +85,6 @@ class AnalyticsControllerTests {
                                 .andExpect(jsonPath("$.size()").value(scheduleLoadDtos.size()))
                                 .andExpect(jsonPath("$[0].scheduleName").value("Morning Shift"))
                                 .andExpect(jsonPath("$[1].loadPercentage").value(80.0));
-        }
-
-        @Test
-        @WithMockUser // Simulate an authenticated user with default (USER) role
-        void getScheduleLoadStats_shouldReturnScheduleLoadDtoList_whenUserIsAuthenticated() throws Exception {
-                // Assuming the endpoint is now accessible to any authenticated user
-                List<ScheduleLoadDto> scheduleLoadDtos = Arrays.asList(
-                                new ScheduleLoadDto(1, "Morning Shift", 8, 10, 80.0));
-                given(analyticsService.getScheduleLoadStats()).willReturn(scheduleLoadDtos);
-
-                mockMvc.perform(get("/api/v1/analytics/schedule-load"))
-                                .andExpect(status().isOk())
-                                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                                .andExpect(jsonPath("$.size()").value(1))
-                                .andExpect(jsonPath("$[0].scheduleName").value("Morning Shift"));
         }
 
         @Test

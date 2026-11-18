@@ -23,6 +23,8 @@ import com.lazardev.FlexCrew.controller.ProjectController;
 import com.lazardev.FlexCrew.controller.RecordController;
 import com.lazardev.FlexCrew.controller.ScheduleController;
 import com.lazardev.FlexCrew.dao.EmployeeRepository;
+import com.lazardev.FlexCrew.dto.analytics.PunctualityStatsDto;
+import com.lazardev.FlexCrew.dto.analytics.ScheduleLoadDto;
 import com.lazardev.FlexCrew.entity.Employee;
 import com.lazardev.FlexCrew.entity.Project;
 import com.lazardev.FlexCrew.entity.Role;
@@ -497,5 +499,50 @@ class SecurityRulesTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(NEW_ADMIN_EMPLOYEE_JSON))
         .andExpect(status().isCreated());
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Analytics: company-wide statistics are ADMIN-only
+  // ---------------------------------------------------------------------------------------------
+
+  @Test
+  void user_readPunctualityStats_returns403() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/v1/analytics/punctuality").header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(analyticsService);
+  }
+
+  @Test
+  void user_readScheduleLoadStats_returns403() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/v1/analytics/schedule-load").header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(analyticsService);
+  }
+
+  @Test
+  void admin_readPunctualityStats_returns200() throws Exception {
+    given(analyticsService.getPunctualityStats())
+        .willReturn(new PunctualityStatsDto(50L, 10L, 5L, 2L, 67L));
+
+    mockMvc
+        .perform(
+            get("/api/v1/analytics/punctuality").header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void admin_readScheduleLoadStats_returns200() throws Exception {
+    given(analyticsService.getScheduleLoadStats())
+        .willReturn(List.of(new ScheduleLoadDto(1, "Morning Shift", 8, 10, 80.0)));
+
+    mockMvc
+        .perform(
+            get("/api/v1/analytics/schedule-load")
+                .header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+        .andExpect(status().isOk());
   }
 }
