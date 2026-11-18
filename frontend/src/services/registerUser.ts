@@ -9,10 +9,10 @@ export const registerUser = async (
   password: string,
 ): Promise<AuthResponse> => {
   try {
-    const role = "USER";
+    // The server always registers new accounts as USER, so no role is sent.
     const response = await api.post(
       "/api/auth/register",
-      { email, names, firstSurname, secondSurname, password, role },
+      { email, names, firstSurname, secondSurname, password },
       {
         headers: { "Content-Type": "application/json" },
         withCredentials: true,

@@ -1,5 +1,6 @@
 package com.lazardev.FlexCrew.security;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -11,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.lazardev.FlexCrew.controller.AnalyticsController;
@@ -44,6 +46,7 @@ import java.util.Optional;
 import javax.crypto.SecretKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -361,5 +364,31 @@ class SecurityRulesTests {
         .andExpect(status().isOk())
         .andExpect(
             header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5173"));
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Registration: the client cannot choose its role
+  // ---------------------------------------------------------------------------------------------
+
+  @Test
+  void register_ignoresClientSentAdminRole() throws Exception {
+    given(employeeRepository.findByEmail("eve@test.local")).willReturn(Optional.empty());
+    given(employeeRepository.save(any(Employee.class)))
+        .willAnswer(invocation -> invocation.getArgument(0));
+
+    mockMvc
+        .perform(
+            post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"names":"Eve","firstSurname":"Mallory","secondSurname":"X",\
+                    "email":"eve@test.local","password":"pass-1234","role":"ADMIN"}"""))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.role").value("USER"));
+
+    ArgumentCaptor<Employee> saved = ArgumentCaptor.forClass(Employee.class);
+    verify(employeeRepository).save(saved.capture());
+    assertEquals(Role.USER, saved.getValue().getRole());
   }
 }
