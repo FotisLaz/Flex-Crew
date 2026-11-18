@@ -80,8 +80,9 @@ public class RecordController {
     }
   }
 
-  // Post (save) a new record
+  // Post (save) a new record: for yourself, or for anyone if you are an admin correcting attendance
   @PostMapping
+  @PreAuthorize("hasRole('ADMIN') or #theRecord.employee?.id == principal.id")
   public ResponseEntity<?> saveRecord(@RequestBody Record theRecord) {
     try {
       Integer id = theRecord.getEmployee().getId();
