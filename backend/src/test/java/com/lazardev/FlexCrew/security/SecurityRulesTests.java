@@ -1,6 +1,8 @@
 package com.lazardev.FlexCrew.security;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -26,8 +28,14 @@ import com.lazardev.FlexCrew.service.EmployeeServiceImpl;
 import com.lazardev.FlexCrew.service.ProjectService;
 import com.lazardev.FlexCrew.service.RecordService;
 import com.lazardev.FlexCrew.service.ScheduleService;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+import java.util.Base64;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import javax.crypto.SecretKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -142,5 +150,81 @@ class SecurityRulesTests {
     mockMvc
         .perform(get("/api/employees").header(HttpHeaders.AUTHORIZATION, bearer(user)))
         .andExpect(status().isOk());
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // 401: a token is sent but cannot be trusted (must not be a 500)
+  // ---------------------------------------------------------------------------------------------
+
+  private static String signedToken(String subject, String base64Key, long expiresInMillis) {
+    SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(base64Key));
+    long now = System.currentTimeMillis();
+    return Jwts.builder()
+        .subject(subject)
+        .issuedAt(new Date(now - 120_000))
+        .expiration(new Date(now + expiresInMillis))
+        .signWith(key)
+        .compact();
+  }
+
+  @Test
+  void expiredToken_returns401() throws Exception {
+    String expired = signedToken(user.getEmail(), TEST_KEY, -60_000);
+    // Everything else about the token is valid, so expiry is the only reason to reject it.
+    given(employeeRepository.findByEmail(user.getEmail())).willReturn(Optional.of(user));
+    given(tokenRepository.findByToken(expired))
+        .willReturn(Optional.of(Token.builder().token(expired).employee(user).build()));
+
+    mockMvc
+        .perform(get("/api/employees").header(HttpHeaders.AUTHORIZATION, "Bearer " + expired))
+        .andExpect(status().isUnauthorized());
+    verify(employeeRepository, never()).findAll();
+  }
+
+  @Test
+  void malformedToken_returns401() throws Exception {
+    mockMvc
+        .perform(get("/api/employees").header(HttpHeaders.AUTHORIZATION, "Bearer not-a-jwt"))
+        .andExpect(status().isUnauthorized());
+    verify(employeeRepository, never()).findAll();
+  }
+
+  @Test
+  void tokenSignedWithAnotherKey_returns401() throws Exception {
+    String otherKey =
+        Base64.getEncoder()
+            .encodeToString("an-attacker-key-that-is-long-enough-for-hs256!!".getBytes());
+    String forged = signedToken(admin.getEmail(), otherKey, 60_000);
+    given(employeeRepository.findByEmail(admin.getEmail())).willReturn(Optional.of(admin));
+
+    mockMvc
+        .perform(get("/api/employees").header(HttpHeaders.AUTHORIZATION, "Bearer " + forged))
+        .andExpect(status().isUnauthorized());
+    verify(employeeRepository, never()).findAll();
+  }
+
+  @Test
+  void tokenForUnknownUser_returns401() throws Exception {
+    String ghost = signedToken("deleted@test.local", TEST_KEY, 60_000);
+    given(employeeRepository.findByEmail("deleted@test.local")).willReturn(Optional.empty());
+
+    mockMvc
+        .perform(get("/api/employees").header(HttpHeaders.AUTHORIZATION, "Bearer " + ghost))
+        .andExpect(status().isUnauthorized());
+    verify(employeeRepository, never()).findAll();
+  }
+
+  /** Regression guard: this already worked before the filter fix. */
+  @Test
+  void revokedToken_returns401() throws Exception {
+    given(employeeRepository.findByEmail(user.getEmail())).willReturn(Optional.of(user));
+    String jwt = jwtService.generateToken(user);
+    given(tokenRepository.findByToken(jwt))
+        .willReturn(Optional.of(Token.builder().token(jwt).employee(user).revoked(true).build()));
+
+    mockMvc
+        .perform(get("/api/employees").header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt))
+        .andExpect(status().isUnauthorized());
+    verify(employeeRepository, never()).findAll();
   }
 }
