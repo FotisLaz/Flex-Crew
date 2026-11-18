@@ -1,5 +1,6 @@
 package com.lazardev.FlexCrew.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -52,6 +53,8 @@ public class Employee implements UserDetails {
   @Column(name = "image_url")
   private String imageUrl;
 
+  // WRITE_ONLY: accepted in request bodies, never written into responses.
+  @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
   @Column(name = "password", columnDefinition = "bpchar(68)", nullable = false)
   private String password;
 
