@@ -37,9 +37,8 @@ public class EmployeeServiceImpl implements EmployeeService {
   @Override
   @Transactional // Add transactional annotation for save operations
   public Employee save(Employee theEmployee) {
-    // Consider adding logic here to encode password if a new employee is saved
-    // or if password field is updated through this method (might need separate
-    // update method)
+    // Only called to create employees (POST /api/employees), so the password is always raw here.
+    theEmployee.setPassword(passwordEncoder.encode(theEmployee.getPassword()));
     return employeeRepository.save(theEmployee);
   }
 
