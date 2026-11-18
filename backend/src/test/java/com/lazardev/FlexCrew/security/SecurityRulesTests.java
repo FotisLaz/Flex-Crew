@@ -27,6 +27,7 @@ import com.lazardev.FlexCrew.dto.analytics.PunctualityStatsDto;
 import com.lazardev.FlexCrew.dto.analytics.ScheduleLoadDto;
 import com.lazardev.FlexCrew.entity.Employee;
 import com.lazardev.FlexCrew.entity.Project;
+import com.lazardev.FlexCrew.entity.Record;
 import com.lazardev.FlexCrew.entity.Role;
 import com.lazardev.FlexCrew.entity.Schedule;
 import com.lazardev.FlexCrew.security.auth.AuthenticationService;
@@ -636,5 +637,55 @@ class SecurityRulesTests {
                 .param("year", "2025")
                 .header(HttpHeaders.AUTHORIZATION, bearer(user)))
         .andExpect(status().isOk());
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Posting attendance: only for yourself, or by an admin (to correct records)
+  // ---------------------------------------------------------------------------------------------
+
+  private static String recordJsonFor(int employeeId) {
+    return """
+        {"employee":{"id":%d},"startTime":"2025-05-01T09:00:00+00:00"}"""
+        .formatted(employeeId);
+  }
+
+  @Test
+  void user_postRecordForOtherEmployee_returns403() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/records")
+                .header(HttpHeaders.AUTHORIZATION, bearer(user))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(recordJsonFor(3)))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(recordService);
+  }
+
+  @Test
+  void user_postOwnRecord_returns201() throws Exception {
+    given(recordService.saveRecord(any(Record.class)))
+        .willReturn(Record.builder().id(10).employee(user).build());
+
+    mockMvc
+        .perform(
+            post("/api/records")
+                .header(HttpHeaders.AUTHORIZATION, bearer(user))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(recordJsonFor(1)))
+        .andExpect(status().isCreated());
+  }
+
+  @Test
+  void admin_postRecordForOtherEmployee_returns201() throws Exception {
+    given(recordService.saveRecord(any(Record.class)))
+        .willReturn(Record.builder().id(11).employee(other).build());
+
+    mockMvc
+        .perform(
+            post("/api/records")
+                .header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(recordJsonFor(3)))
+        .andExpect(status().isCreated());
   }
 }
