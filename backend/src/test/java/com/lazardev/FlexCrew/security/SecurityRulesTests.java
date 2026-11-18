@@ -1,6 +1,7 @@
 package com.lazardev.FlexCrew.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -687,5 +688,52 @@ class SecurityRulesTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(recordJsonFor(3)))
         .andExpect(status().isCreated());
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Password hashes never leave the server
+  // ---------------------------------------------------------------------------------------------
+
+  @Test
+  void employeeJson_doesNotContainPasswordHash() throws Exception {
+    given(employeeRepository.findById(1)).willReturn(Optional.of(user));
+
+    mockMvc
+        .perform(get("/api/employees/1").header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.email").value(user.getEmail()))
+        .andExpect(jsonPath("$.password").doesNotExist());
+  }
+
+  @Test
+  void recordJson_doesNotContainEmployeePasswordHash() throws Exception {
+    given(recordService.findbyEmployeeId(1))
+        .willReturn(List.of(Record.builder().id(5).employee(user).build()));
+
+    mockMvc
+        .perform(get("/api/records/1").header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].employee.email").value(user.getEmail()))
+        .andExpect(jsonPath("$[0].employee.password").doesNotExist());
+  }
+
+  /** Guards the choice of WRITE_ONLY over @JsonIgnore: a password must still be accepted. */
+  @Test
+  void admin_createEmployee_passwordIsStillReadFromJson() throws Exception {
+    given(employeeRepository.save(any(Employee.class)))
+        .willAnswer(invocation -> invocation.getArgument(0));
+
+    mockMvc
+        .perform(
+            post("/api/employees")
+                .header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(NEW_ADMIN_EMPLOYEE_JSON))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.password").doesNotExist());
+
+    ArgumentCaptor<Employee> saved = ArgumentCaptor.forClass(Employee.class);
+    verify(employeeRepository).save(saved.capture());
+    assertNotNull(saved.getValue().getPassword());
   }
 }
