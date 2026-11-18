@@ -2,6 +2,7 @@ package com.lazardev.FlexCrew.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -60,6 +61,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -98,6 +100,7 @@ class SecurityRulesTests {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private JwtService jwtService;
+  @Autowired private PasswordEncoder passwordEncoder;
 
   @MockBean private EmployeeRepository employeeRepository;
   @MockBean private TokenRepository tokenRepository;
@@ -735,5 +738,51 @@ class SecurityRulesTests {
     ArgumentCaptor<Employee> saved = ArgumentCaptor.forClass(Employee.class);
     verify(employeeRepository).save(saved.capture());
     assertNotNull(saved.getValue().getPassword());
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Admin-created employees get a hashed password and can log in
+  // ---------------------------------------------------------------------------------------------
+
+  /** Creates "mal@test.local" (password "pass-1234") as ADMIN and returns what was saved. */
+  private Employee createEmployeeAsAdmin() throws Exception {
+    given(employeeRepository.save(any(Employee.class)))
+        .willAnswer(invocation -> invocation.getArgument(0));
+
+    mockMvc
+        .perform(
+            post("/api/employees")
+                .header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(NEW_ADMIN_EMPLOYEE_JSON))
+        .andExpect(status().isCreated());
+
+    ArgumentCaptor<Employee> saved = ArgumentCaptor.forClass(Employee.class);
+    verify(employeeRepository).save(saved.capture());
+    return saved.getValue();
+  }
+
+  @Test
+  void admin_createEmployee_storesBCryptHash() throws Exception {
+    Employee saved = createEmployeeAsAdmin();
+
+    assertTrue(saved.getPassword().startsWith("$2"), "expected a BCrypt hash");
+    assertTrue(passwordEncoder.matches("pass-1234", saved.getPassword()));
+  }
+
+  @Test
+  void admin_createdEmployee_canLogIn() throws Exception {
+    Employee saved = createEmployeeAsAdmin();
+    given(employeeRepository.findByEmail("mal@test.local")).willReturn(Optional.of(saved));
+
+    mockMvc
+        .perform(
+            post("/api/auth/authenticate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"email":"mal@test.local","password":"pass-1234"}"""))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.access_token").isNotEmpty());
   }
 }
