@@ -32,6 +32,7 @@ public class EmployeeController {
 
   // Save method (POST mapping)
   @PostMapping
+  @PreAuthorize("hasRole('ADMIN')")
   public ResponseEntity<?> createEmployee(@RequestBody Employee theEmployee) {
     try {
       if (theEmployee == null) {
