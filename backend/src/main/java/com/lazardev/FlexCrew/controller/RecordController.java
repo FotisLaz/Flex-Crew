@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,8 +26,9 @@ public class RecordController {
     this.recordService = theRecordService;
   }
 
-  // Get records by employee id
+  // Get records by employee id (own records, or any employee's for an admin)
   @GetMapping("/{employeeId}")
+  @PreAuthorize("hasRole('ADMIN') or #employeeId == principal.id")
   public ResponseEntity<?> getRecordsbyEmployeeId(@PathVariable("employeeId") Integer employeeId) {
     try {
       if (employeeId <= 0) {
@@ -41,6 +43,7 @@ public class RecordController {
   }
 
   @GetMapping("/search")
+  @PreAuthorize("hasRole('ADMIN') or #employeeEmail == authentication.name")
   public ResponseEntity<?> getRecordsbyEmployeeEmail(
       @RequestParam(name = "employeeEmail") String employeeEmail) {
     try {
@@ -56,6 +59,7 @@ public class RecordController {
   }
 
   @GetMapping("/searchbymonth")
+  @PreAuthorize("hasRole('ADMIN') or #employeeEmail == authentication.name")
   public ResponseEntity<?> getRecordsOfTheMonthbyEmployeeEmail(
       @RequestParam(name = "employeeEmail") String employeeEmail,
       @RequestParam(name = "month") int month,
