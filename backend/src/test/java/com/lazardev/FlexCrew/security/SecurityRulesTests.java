@@ -1,0 +1,146 @@
+package com.lazardev.FlexCrew.security;
+
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.lazardev.FlexCrew.controller.AnalyticsController;
+import com.lazardev.FlexCrew.controller.EmployeeController;
+import com.lazardev.FlexCrew.controller.LoginController;
+import com.lazardev.FlexCrew.controller.ProjectController;
+import com.lazardev.FlexCrew.controller.RecordController;
+import com.lazardev.FlexCrew.controller.ScheduleController;
+import com.lazardev.FlexCrew.dao.EmployeeRepository;
+import com.lazardev.FlexCrew.entity.Employee;
+import com.lazardev.FlexCrew.entity.Role;
+import com.lazardev.FlexCrew.security.auth.AuthenticationService;
+import com.lazardev.FlexCrew.security.config.ApplicationConfig;
+import com.lazardev.FlexCrew.security.config.JwtService;
+import com.lazardev.FlexCrew.security.config.SecurityConfiguration;
+import com.lazardev.FlexCrew.security.token.Token;
+import com.lazardev.FlexCrew.security.token.TokenRepository;
+import com.lazardev.FlexCrew.service.AnalyticsService;
+import com.lazardev.FlexCrew.service.EmployeeServiceImpl;
+import com.lazardev.FlexCrew.service.ProjectService;
+import com.lazardev.FlexCrew.service.RecordService;
+import com.lazardev.FlexCrew.service.ScheduleService;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+
+/**
+ * Proves the authorization rules against the REAL security setup: {@link SecurityConfiguration},
+ * the real {@code JwtAuthenticationFilter}, real JWTs signed by {@link JwtService}, and the real
+ * authorities from {@link Employee#getAuthorities()}. Only persistence and business services are
+ * mocked. No {@code @WithMockUser}: it would bypass {@code getAuthorities()} and hide role bugs.
+ */
+@WebMvcTest(
+    controllers = {
+      LoginController.class,
+      EmployeeController.class,
+      RecordController.class,
+      ProjectController.class,
+      ScheduleController.class,
+      AnalyticsController.class
+    })
+@Import({
+  SecurityConfiguration.class,
+  ApplicationConfig.class,
+  JwtService.class,
+  AuthenticationService.class,
+  EmployeeServiceImpl.class
+})
+@TestPropertySource(
+    properties = "application.security.jwt.secret-key=" + SecurityRulesTests.TEST_KEY)
+class SecurityRulesTests {
+
+  /** Test-only signing key: base64 of "flexcrew-test-only-jwt-signing-key-not-a-real-secret". */
+  static final String TEST_KEY =
+      "ZmxleGNyZXctdGVzdC1vbmx5LWp3dC1zaWduaW5nLWtleS1ub3QtYS1yZWFsLXNlY3JldA==";
+
+  static final String PASSWORD = "old-password";
+  private static final String PASSWORD_HASH = new BCryptPasswordEncoder().encode(PASSWORD);
+
+  @Autowired private MockMvc mockMvc;
+  @Autowired private JwtService jwtService;
+
+  @MockBean private EmployeeRepository employeeRepository;
+  @MockBean private TokenRepository tokenRepository;
+  @MockBean private RecordService recordService;
+  @MockBean private ProjectService projectService;
+  @MockBean private ScheduleService scheduleService;
+  @MockBean private AnalyticsService analyticsService;
+
+  private Employee user; // id 1, USER
+  private Employee admin; // id 2, ADMIN
+  private Employee other; // id 3, USER
+
+  @BeforeEach
+  void setUp() {
+    user = employee(1, "user@test.local", Role.USER);
+    admin = employee(2, "admin@test.local", Role.ADMIN);
+    other = employee(3, "other@test.local", Role.USER);
+  }
+
+  private static Employee employee(int id, String email, Role role) {
+    return Employee.builder()
+        .id(id)
+        .names("Test")
+        .firstSurname("Person")
+        .email(email)
+        .password(PASSWORD_HASH)
+        .role(role)
+        .build();
+  }
+
+  /** Signs a real JWT for the employee and stores it as a valid token, like a fresh login. */
+  private String bearer(Employee employee) {
+    given(employeeRepository.findByEmail(employee.getEmail())).willReturn(Optional.of(employee));
+    String jwt = jwtService.generateToken(employee);
+    given(tokenRepository.findByToken(jwt))
+        .willReturn(Optional.of(Token.builder().token(jwt).employee(employee).build()));
+    return "Bearer " + jwt;
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // 401: no token
+  // ---------------------------------------------------------------------------------------------
+
+  @Test
+  void noToken_readEmployees_returns401() throws Exception {
+    mockMvc.perform(get("/api/employees")).andExpect(status().isUnauthorized());
+    verifyNoInteractions(employeeRepository);
+  }
+
+  @Test
+  void noToken_readRecords_returns401() throws Exception {
+    mockMvc.perform(get("/api/records/1")).andExpect(status().isUnauthorized());
+    verifyNoInteractions(recordService);
+  }
+
+  @Test
+  void noToken_deleteSchedule_returns401() throws Exception {
+    mockMvc.perform(delete("/api/schedules/1")).andExpect(status().isUnauthorized());
+    verifyNoInteractions(scheduleService);
+  }
+
+  @Test
+  void validUserToken_readEmployees_returns200() throws Exception {
+    given(employeeRepository.findAll()).willReturn(List.of(user, other));
+
+    mockMvc
+        .perform(get("/api/employees").header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isOk());
+  }
+}

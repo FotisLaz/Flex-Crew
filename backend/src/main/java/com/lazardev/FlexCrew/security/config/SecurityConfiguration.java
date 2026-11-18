@@ -5,11 +5,13 @@ import static org.springframework.security.config.http.SessionCreationPolicy.STA
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -55,6 +57,10 @@ public class SecurityConfiguration {
             .requestMatchers(HttpMethod.DELETE, "/api/v1/management/**")
             .hasAnyAuthority("admin:delete", "manager:delete")
             .anyRequest().authenticated())
+        // No login form or HTTP Basic, so tell clients "not authenticated" (401) instead of
+        // Spring's fallback 403.
+        .exceptionHandling(ex -> ex.authenticationEntryPoint(
+            new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
         .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
         .authenticationProvider(authenticationProvider)
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
