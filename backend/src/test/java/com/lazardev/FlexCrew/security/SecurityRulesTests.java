@@ -2,6 +2,7 @@ package com.lazardev.FlexCrew.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -784,5 +785,27 @@ class SecurityRulesTests {
                     {"email":"mal@test.local","password":"pass-1234"}"""))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.access_token").isNotEmpty());
+  }
+
+  /** A client-sent id would make save() update that employee (role and password included). */
+  @Test
+  void admin_createEmployee_withExistingId_insertsInsteadOfOverwriting() throws Exception {
+    given(employeeRepository.save(any(Employee.class)))
+        .willAnswer(invocation -> invocation.getArgument(0));
+
+    mockMvc
+        .perform(
+            post("/api/employees")
+                .header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"id":3,"names":"Mal","firstSurname":"Lory","email":"mal@test.local",\
+                    "password":"pass-1234","role":"ADMIN"}"""))
+        .andExpect(status().isCreated());
+
+    ArgumentCaptor<Employee> saved = ArgumentCaptor.forClass(Employee.class);
+    verify(employeeRepository).save(saved.capture());
+    assertNull(saved.getValue().getId());
   }
 }
