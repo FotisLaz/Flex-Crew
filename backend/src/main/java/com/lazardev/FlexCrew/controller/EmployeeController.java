@@ -39,6 +39,8 @@ public class EmployeeController {
         return ResponseEntity.badRequest().body("Employee data is missing.");
       }
 
+      // Always insert: a client-sent id would make save() overwrite that employee.
+      theEmployee.setId(null);
       Employee savedEmployee = employeeService.save(theEmployee);
       if (savedEmployee == null) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
