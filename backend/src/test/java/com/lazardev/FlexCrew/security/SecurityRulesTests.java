@@ -327,6 +327,30 @@ class SecurityRulesTests {
   }
 
   @Test
+  void admin_updateSchedule_returns200() throws Exception {
+    mockMvc
+        .perform(
+            put("/api/schedules/1")
+                .header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(SCHEDULE_1_JSON))
+        .andExpect(status().isOk());
+    verify(scheduleService).updateSchedule(any(Schedule.class));
+  }
+
+  @Test
+  void admin_assignEmployeeToSchedule_returns200() throws Exception {
+    given(scheduleService.assignEmployeeToSchedule(3, 1))
+        .willReturn(Schedule.builder().id(1).name("Morning").build());
+
+    mockMvc
+        .perform(
+            post("/api/schedules/assign/3/1").header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+        .andExpect(status().isOk());
+    verify(scheduleService).assignEmployeeToSchedule(3, 1);
+  }
+
+  @Test
   void admin_deleteSchedule_returns204() throws Exception {
     mockMvc
         .perform(delete("/api/schedules/1").header(HttpHeaders.AUTHORIZATION, bearer(admin)))
