@@ -80,9 +80,10 @@ public class Employee implements UserDetails {
   // @OneToMany(mappedBy = "employee")
   // private ListToken tokens;
 
+  // hasRole('ADMIN') checks for the authority "ROLE_ADMIN". The DB keeps storing "ADMIN".
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
-    return List.of(new SimpleGrantedAuthority(role.name()));
+    return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
   }
 
   @Override

@@ -1,11 +1,14 @@
 package com.lazardev.FlexCrew.security;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.lazardev.FlexCrew.controller.AnalyticsController;
@@ -17,6 +20,7 @@ import com.lazardev.FlexCrew.controller.ScheduleController;
 import com.lazardev.FlexCrew.dao.EmployeeRepository;
 import com.lazardev.FlexCrew.entity.Employee;
 import com.lazardev.FlexCrew.entity.Role;
+import com.lazardev.FlexCrew.entity.Schedule;
 import com.lazardev.FlexCrew.security.auth.AuthenticationService;
 import com.lazardev.FlexCrew.security.config.ApplicationConfig;
 import com.lazardev.FlexCrew.security.config.JwtService;
@@ -43,6 +47,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -226,5 +231,89 @@ class SecurityRulesTests {
         .perform(get("/api/employees").header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt))
         .andExpect(status().isUnauthorized());
     verify(employeeRepository, never()).findAll();
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Schedules: @PreAuthorize("hasRole('ADMIN')") must actually be enforced
+  // ---------------------------------------------------------------------------------------------
+
+  private static final String NEW_SCHEDULE_JSON =
+      """
+      {"name":"Morning","startTime":"09:00:00+00:00","endTime":"17:00:00+00:00","maxEmployees":5}""";
+  private static final String SCHEDULE_1_JSON =
+      """
+      {"id":1,"name":"Morning","startTime":"09:00:00+00:00","endTime":"17:00:00+00:00",\
+      "maxEmployees":5}""";
+
+  @Test
+  void user_createSchedule_returns403() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/schedules")
+                .header(HttpHeaders.AUTHORIZATION, bearer(user))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(NEW_SCHEDULE_JSON))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(scheduleService);
+  }
+
+  @Test
+  void user_updateSchedule_returns403() throws Exception {
+    mockMvc
+        .perform(
+            put("/api/schedules/1")
+                .header(HttpHeaders.AUTHORIZATION, bearer(user))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(SCHEDULE_1_JSON))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(scheduleService);
+  }
+
+  @Test
+  void user_deleteSchedule_returns403() throws Exception {
+    mockMvc
+        .perform(delete("/api/schedules/1").header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(scheduleService);
+  }
+
+  @Test
+  void user_assignEmployeeToSchedule_returns403() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/schedules/assign/3/1").header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(scheduleService);
+  }
+
+  @Test
+  void user_optimizeTeamSchedule_returns403() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/schedules/optimize/team/1").header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(scheduleService);
+  }
+
+  @Test
+  void admin_createSchedule_returns201() throws Exception {
+    given(scheduleService.saveSchedule(any(Schedule.class)))
+        .willAnswer(invocation -> invocation.getArgument(0));
+
+    mockMvc
+        .perform(
+            post("/api/schedules")
+                .header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(NEW_SCHEDULE_JSON))
+        .andExpect(status().isCreated());
+  }
+
+  @Test
+  void admin_deleteSchedule_returns204() throws Exception {
+    mockMvc
+        .perform(delete("/api/schedules/1").header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+        .andExpect(status().isNoContent());
+    verify(scheduleService).deleteScheduleById(1);
   }
 }
