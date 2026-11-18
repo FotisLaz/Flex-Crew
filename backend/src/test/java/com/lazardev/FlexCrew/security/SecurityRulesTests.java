@@ -2,6 +2,7 @@ package com.lazardev.FlexCrew.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -23,6 +24,7 @@ import com.lazardev.FlexCrew.controller.RecordController;
 import com.lazardev.FlexCrew.controller.ScheduleController;
 import com.lazardev.FlexCrew.dao.EmployeeRepository;
 import com.lazardev.FlexCrew.entity.Employee;
+import com.lazardev.FlexCrew.entity.Project;
 import com.lazardev.FlexCrew.entity.Role;
 import com.lazardev.FlexCrew.entity.Schedule;
 import com.lazardev.FlexCrew.security.auth.AuthenticationService;
@@ -390,5 +392,110 @@ class SecurityRulesTests {
     ArgumentCaptor<Employee> saved = ArgumentCaptor.forClass(Employee.class);
     verify(employeeRepository).save(saved.capture());
     assertEquals(Role.USER, saved.getValue().getRole());
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Projects and employees: only ADMIN may create, update or delete
+  // ---------------------------------------------------------------------------------------------
+
+  private static final String PROJECT_JSON = """
+      {"name":"Apollo","description":"Test project"}""";
+  private static final String NEW_ADMIN_EMPLOYEE_JSON =
+      """
+      {"names":"Mal","firstSurname":"Lory","email":"mal@test.local",\
+      "password":"pass-1234","role":"ADMIN"}""";
+
+  @Test
+  void user_createProject_returns403() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/projects")
+                .header(HttpHeaders.AUTHORIZATION, bearer(user))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(PROJECT_JSON))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(projectService);
+  }
+
+  @Test
+  void user_updateProject_returns403() throws Exception {
+    mockMvc
+        .perform(
+            put("/api/v1/projects/1")
+                .header(HttpHeaders.AUTHORIZATION, bearer(user))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(PROJECT_JSON))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(projectService);
+  }
+
+  @Test
+  void user_deleteProject_returns403() throws Exception {
+    mockMvc
+        .perform(delete("/api/v1/projects/1").header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(projectService);
+  }
+
+  @Test
+  void user_createEmployee_returns403() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/employees")
+                .header(HttpHeaders.AUTHORIZATION, bearer(user))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(NEW_ADMIN_EMPLOYEE_JSON))
+        .andExpect(status().isForbidden());
+    verify(employeeRepository, never()).save(any(Employee.class));
+  }
+
+  @Test
+  void admin_createProject_returns201() throws Exception {
+    given(projectService.createProject(any(Project.class)))
+        .willAnswer(invocation -> invocation.getArgument(0));
+
+    mockMvc
+        .perform(
+            post("/api/v1/projects")
+                .header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(PROJECT_JSON))
+        .andExpect(status().isCreated());
+  }
+
+  @Test
+  void admin_updateProject_returns200() throws Exception {
+    given(projectService.updateProject(eq(1), any(Project.class)))
+        .willAnswer(invocation -> invocation.getArgument(1));
+
+    mockMvc
+        .perform(
+            put("/api/v1/projects/1")
+                .header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(PROJECT_JSON))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void admin_deleteProject_returns204() throws Exception {
+    mockMvc
+        .perform(delete("/api/v1/projects/1").header(HttpHeaders.AUTHORIZATION, bearer(admin)))
+        .andExpect(status().isNoContent());
+    verify(projectService).deleteProject(1);
+  }
+
+  @Test
+  void admin_createEmployee_returns201() throws Exception {
+    given(employeeRepository.save(any(Employee.class)))
+        .willAnswer(invocation -> invocation.getArgument(0));
+
+    mockMvc
+        .perform(
+            post("/api/employees")
+                .header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(NEW_ADMIN_EMPLOYEE_JSON))
+        .andExpect(status().isCreated());
   }
 }

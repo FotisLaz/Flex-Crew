@@ -6,6 +6,7 @@ import com.lazardev.FlexCrew.service.ProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,6 +36,7 @@ public class ProjectController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Project> createProject(@RequestBody Project project) {
         // Add validation for the project object here (e.g., using @Valid)
         Project createdProject = projectService.createProject(project);
@@ -42,6 +44,7 @@ public class ProjectController {
     }
 
     @PutMapping("/{projectId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Project> updateProject(@PathVariable Integer projectId, @RequestBody Project projectDetails) {
         // Add validation for the projectDetails object here
         try {
@@ -53,6 +56,7 @@ public class ProjectController {
     }
 
     @DeleteMapping("/{projectId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteProject(@PathVariable Integer projectId) {
         try {
             projectService.deleteProject(projectId);
