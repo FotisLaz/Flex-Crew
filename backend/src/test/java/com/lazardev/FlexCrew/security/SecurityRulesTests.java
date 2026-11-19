@@ -166,6 +166,19 @@ class SecurityRulesTests {
               }
               return 0;
             });
+    given(refreshTokenRepository.revokeAllByEmployeeId(anyInt()))
+        .willAnswer(
+            invocation -> {
+              int revoked = 0;
+              for (RefreshToken row : refreshTokenTable.values()) {
+                if (row.getEmployee().getId().equals(invocation.getArgument(0))
+                    && !row.isRevoked()) {
+                  row.setRevoked(true);
+                  revoked++;
+                }
+              }
+              return revoked;
+            });
   }
 
   private static Employee employee(int id, String email, Role role) {
@@ -1035,6 +1048,37 @@ class SecurityRulesTests {
     refreshAndGetNewRefreshToken(first);
 
     refresh("Bearer " + first).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void refreshToken_reused_revokesAllOfTheUsersTokens() throws Exception {
+    String first = loginAndGetRefreshToken(user);
+    String second = refreshAndGetNewRefreshToken(first);
+    String othersToken = storedRefreshToken(other);
+    String accessToken = jwtService.generateToken(user);
+    Token accessRow = Token.builder().token(accessToken).employee(user).build();
+    given(tokenRepository.findByToken(accessToken)).willReturn(Optional.of(accessRow));
+    given(tokenRepository.findAllValidTokenByUser(user.getId())).willReturn(List.of(accessRow));
+
+    refresh("Bearer " + first).andExpect(status().isUnauthorized());
+
+    refresh("Bearer " + second).andExpect(status().isUnauthorized());
+    mockMvc
+        .perform(get("/api/employees").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+        .andExpect(status().isUnauthorized());
+    assertFalse(refreshTokenTable.get(sha256Hex(othersToken)).isRevoked());
+  }
+
+  /** Two requests racing with one token: the one that loses the atomic revoke counts as reuse. */
+  @Test
+  void refreshToken_losingTheRevokeRace_revokesAllOfTheUsersTokens() throws Exception {
+    String token = storedRefreshToken(user);
+    String otherSession = storedRefreshToken(user);
+    given(refreshTokenRepository.revokeIfActive(anyInt())).willReturn(0);
+
+    refresh("Bearer " + token).andExpect(status().isUnauthorized());
+
+    assertTrue(refreshTokenTable.get(sha256Hex(otherSession)).isRevoked());
   }
 
   @Test
