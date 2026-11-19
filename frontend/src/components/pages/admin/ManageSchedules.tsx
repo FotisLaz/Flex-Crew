@@ -95,41 +95,19 @@ const ManageSchedules: React.FC = () => {
         }
     };
 
-    // --- Delete Logic (Placeholder - Needs Confirmation Modal) ---
     const handleDelete = async (schedule: Schedule) => {
-        // TODO: Implement confirmation modal first
         const confirmDelete = window.confirm(`Are you sure you want to delete the schedule "${schedule.name}"? This action cannot be undone.`);
         
         if (confirmDelete) {
              try {
                  await apiPrivate.delete(`/api/schedules/${schedule.id}`);
-                 // Remove the schedule from the list optimistically or after confirmation
                  setSchedules(schedules.filter(s => s.id !== schedule.id));
              } catch (err) {
                  console.error("Failed to delete schedule:", err);
-                 const message = getErrorMessage(err, "Failed to delete schedule.");
-                 setError(message);
-                 // Show error message to the user (e.g., using a toast notification or an alert)
-                 alert(`Error deleting schedule: ${message}`); // Simple alert for now
+                 setError(getErrorMessage(err, "Failed to delete schedule."));
              }
         }
     };
-    
-    /* 
-    const confirmDelete = async () => {
-         console.log("Deleting schedule...")
-        // if (!scheduleToDelete) return;
-        // try {
-        //     await apiPrivate.delete(`/api/schedules/${scheduleToDelete.id}`);
-        //     setSchedules(schedules.filter(s => s.id !== scheduleToDelete.id));
-        //     setIsDeleteConfirmOpen(false);
-        //     setScheduleToDelete(null);
-        // } catch (err) {
-        //     console.error("Failed to delete schedule:", err);
-        //     // Show error message to user
-        // }
-    };
-    */
 
     // Helper to format time (HH:MM)
     const formatTime = (timeString: string | null | undefined): string => {
