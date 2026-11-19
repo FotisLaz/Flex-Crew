@@ -99,11 +99,6 @@ public class AuthenticationService {
         .build();
   }
 
-  @Override
-  public String toString() {
-    return "AuthenticationService [ নামের (" + repository + ")]";
-  }
-
   private void saveUserToken(Employee user, String jwtToken) {
     Token token = Token.builder()
         .employee(user)
