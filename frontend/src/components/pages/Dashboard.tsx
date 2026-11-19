@@ -1,6 +1,5 @@
 import Navbar from "../common/Navbar";
 import MainPanel from "../common/MainPanel";
-import SecondaryPanel from "../common/SecondaryPanel";
 import Grid from "../common/Grid";
 
 const Dashboard = () => {
@@ -8,7 +7,6 @@ const Dashboard = () => {
     <Grid>
       <Navbar />
       <MainPanel />
-      <SecondaryPanel />
     </Grid>
   );
 };
