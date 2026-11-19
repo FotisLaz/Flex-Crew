@@ -84,9 +84,6 @@ const LoginForm = () => {
         return;
       }
 
-      // Log the received role for debugging
-      console.log("Role received from backend:", role);
-      
       // Set auth context: pass tokens, the email entered in the form, and the role from response
       login(accessToken, refreshToken, userEmail, role); 
       
@@ -98,7 +95,6 @@ const LoginForm = () => {
       setUserEmail("");
       setPwd("");
       
-      console.log("Navigating to:", from);
       // Go to the path which user came from
       navigate(from, { replace: true });
     } catch (err) {

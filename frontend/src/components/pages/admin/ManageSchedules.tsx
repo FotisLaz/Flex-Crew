@@ -97,7 +97,6 @@ const ManageSchedules: React.FC = () => {
 
     // --- Delete Logic (Placeholder - Needs Confirmation Modal) ---
     const handleDelete = async (schedule: Schedule) => {
-        console.log("Attempting to delete schedule (no confirmation yet):", schedule.id);
         // TODO: Implement confirmation modal first
         const confirmDelete = window.confirm(`Are you sure you want to delete the schedule "${schedule.name}"? This action cannot be undone.`);
         
@@ -106,7 +105,6 @@ const ManageSchedules: React.FC = () => {
                  await apiPrivate.delete(`/api/schedules/${schedule.id}`);
                  // Remove the schedule from the list optimistically or after confirmation
                  setSchedules(schedules.filter(s => s.id !== schedule.id));
-                 console.log("Schedule deleted successfully");
              } catch (err) {
                  console.error("Failed to delete schedule:", err);
                  const message = getErrorMessage(err, "Failed to delete schedule.");
