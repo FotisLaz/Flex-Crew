@@ -54,7 +54,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
     properties = {
       "application.security.jwt.secret-key=" + SecurityRulesTests.TEST_KEY,
       "spring.jpa.properties.hibernate.default_schema=public",
-      "spring.jpa.hibernate.ddl-auto=create-drop"
+      "spring.jpa.hibernate.ddl-auto=create"
     })
 class RefreshTokenPersistenceTests {
 
