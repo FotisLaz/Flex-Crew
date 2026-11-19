@@ -1082,6 +1082,37 @@ class SecurityRulesTests {
   }
 
   @Test
+  void logout_revokesTheRefreshTokenAndTheAccessToken() throws Exception {
+    String refreshToken = loginAndGetRefreshToken(user);
+    String accessToken = jwtService.generateToken(user);
+    Token accessRow = Token.builder().token(accessToken).employee(user).build();
+    given(tokenRepository.findByToken(accessToken)).willReturn(Optional.of(accessRow));
+    given(tokenRepository.findAllValidTokenByUser(user.getId())).willReturn(List.of(accessRow));
+
+    mockMvc
+        .perform(
+            post("/api/auth/logout").header(HttpHeaders.AUTHORIZATION, "Bearer " + refreshToken))
+        .andExpect(status().isNoContent());
+
+    refresh("Bearer " + refreshToken).andExpect(status().isUnauthorized());
+    mockMvc
+        .perform(get("/api/employees").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void logout_withoutHeader_returns401() throws Exception {
+    mockMvc.perform(post("/api/auth/logout")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void logout_withAccessToken_returns401() throws Exception {
+    mockMvc
+        .perform(post("/api/auth/logout").header(HttpHeaders.AUTHORIZATION, bearer(user)))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void refreshToken_withAccessToken_returns401() throws Exception {
     refresh(bearer(user)).andExpect(status().isUnauthorized());
   }

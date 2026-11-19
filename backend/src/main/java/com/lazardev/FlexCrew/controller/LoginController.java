@@ -40,4 +40,11 @@ public class LoginController {
       @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader) {
     return ResponseEntity.ok(authenticationService.refreshToken(authHeader));
   }
+
+  @PostMapping("/logout")
+  public ResponseEntity<Void> logout(
+      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader) {
+    authenticationService.logout(authHeader);
+    return ResponseEntity.noContent().build();
+  }
 }
