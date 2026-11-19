@@ -1,3 +1,4 @@
+import { Role } from "./Role";
 import { Schedule } from "./Schedule";
 import { Team } from "./Team";
 
@@ -11,4 +12,5 @@ export interface Employee {
   team: Team;
   managedTeam: Team;
   schedule: Schedule;
+  role: Role;
 }

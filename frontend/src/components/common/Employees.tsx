@@ -28,7 +28,7 @@ export const Employees = ({ searchFilter = '' }: EmployeesProps) => {
       try {
         setLoading(true);
         // Uses the tokens expiration proof, aka apiPrivate, to get employees
-        const response = await apiPrivate.get("/api/employees", {
+        const response = await apiPrivate.get<Employee[]>("/api/employees", {
           signal: controller.signal,
         });
         
