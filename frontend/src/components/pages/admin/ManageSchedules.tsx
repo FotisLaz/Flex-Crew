@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Schedule } from '../../../types/Schedule';
 import useApiPrivate from '../../../hooks/useApiPrivate';
@@ -24,7 +24,7 @@ const ManageSchedules: React.FC = () => {
     // const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
     // const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
 
-    const fetchSchedules = async (controller?: AbortController) => {
+    const fetchSchedules = useCallback(async (controller?: AbortController) => {
         setLoading(true);
         setError(null);
         try {
@@ -38,7 +38,7 @@ const ManageSchedules: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [apiPrivate]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -46,8 +46,7 @@ const ManageSchedules: React.FC = () => {
         return () => {
             controller.abort();
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Removed apiPrivate dependency if fetchSchedules doesn't change based on it
+    }, [fetchSchedules]);
 
     // --- Handlers for opening modals ---
     const handleCreate = () => {
