@@ -108,10 +108,10 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 })
 @TestPropertySource(
     properties = "application.security.jwt.secret-key=" + SecurityRulesTests.TEST_KEY)
-class SecurityRulesTests {
+public class SecurityRulesTests {
 
   /** Test-only signing key: base64 of "flexcrew-test-only-jwt-signing-key-not-a-real-secret". */
-  static final String TEST_KEY =
+  public static final String TEST_KEY =
       "ZmxleGNyZXctdGVzdC1vbmx5LWp3dC1zaWduaW5nLWtleS1ub3QtYS1yZWFsLXNlY3JldA==";
 
   static final String PASSWORD = "old-password";
