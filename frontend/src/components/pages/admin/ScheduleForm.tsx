@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Schedule } from '../../../types/Schedule';
+import { getErrorMessage } from '../../../api/getErrorMessage';
 
 interface ScheduleFormProps {
     initialData?: Schedule | null; // Pass existing data for editing, null for creating
@@ -92,9 +93,9 @@ const ScheduleForm: React.FC<ScheduleFormProps> = ({ initialData, onSubmit, onCa
         try {
             await onSubmit(scheduleData);
             // Let the parent component handle closing the modal on success
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error submitting schedule form:", error);
-            setFormError(error.message || "An error occurred while saving the schedule.");
+            setFormError(getErrorMessage(error, "An error occurred while saving the schedule."));
         }
     };
 

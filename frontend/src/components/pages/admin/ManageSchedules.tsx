@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Schedule } from '../../../types/Schedule';
 import useApiPrivate from '../../../hooks/useApiPrivate';
 import { BsPlusCircle, BsPencilSquare, BsTrash, BsClock, BsPeople } from 'react-icons/bs';
@@ -6,6 +7,7 @@ import Grid from '../../common/Grid';
 import Navbar from '../../common/Navbar';
 import Modal from '../../common/Modal';
 import ScheduleForm from './ScheduleForm';
+import { getErrorMessage } from '../../../api/getErrorMessage';
 
 const ManageSchedules: React.FC = () => {
     const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -28,10 +30,10 @@ const ManageSchedules: React.FC = () => {
         try {
             const response = await apiPrivate.get('/api/schedules', { signal: controller?.signal });
             setSchedules(response.data || []);
-        } catch (err: any) {
+        } catch (err) {
             console.error("Error fetching schedules:", err);
-            if (err.name !== 'AbortError') {
-                setError(err.response?.data?.message || err.message || 'Failed to fetch schedules.');
+            if (!axios.isCancel(err)) {
+                setError(getErrorMessage(err, 'Failed to fetch schedules.'));
             }
         } finally {
             setLoading(false);
@@ -84,10 +86,10 @@ const ManageSchedules: React.FC = () => {
                 setSchedules([...schedules, response.data]);
             }
             handleCloseModal(); // Close modal on success
-        } catch (err: any) {
+        } catch (err) {
             console.error(`Error ${isEditing ? 'updating' : 'creating'} schedule:`, err);
             // Display error within the modal (could be passed down to ScheduleForm or shown here)
-            setError(err.response?.data?.message || err.message || `Failed to ${isEditing ? 'update' : 'create'} schedule.`);
+            setError(getErrorMessage(err, `Failed to ${isEditing ? 'update' : 'create'} schedule.`));
             // Optionally, re-throw or handle specific errors
         } finally {
             setIsSaving(false);
@@ -106,11 +108,12 @@ const ManageSchedules: React.FC = () => {
                  // Remove the schedule from the list optimistically or after confirmation
                  setSchedules(schedules.filter(s => s.id !== schedule.id));
                  console.log("Schedule deleted successfully");
-             } catch (err: any) {
+             } catch (err) {
                  console.error("Failed to delete schedule:", err);
-                 setError(err.response?.data?.message || err.message || "Failed to delete schedule.");
+                 const message = getErrorMessage(err, "Failed to delete schedule.");
+                 setError(message);
                  // Show error message to the user (e.g., using a toast notification or an alert)
-                 alert(`Error deleting schedule: ${error}`); // Simple alert for now
+                 alert(`Error deleting schedule: ${message}`); // Simple alert for now
              }
         }
     };

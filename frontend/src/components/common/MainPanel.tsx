@@ -5,6 +5,7 @@ import { Employee } from "../../types/Employee";
 import { Issue } from "../../types/Issue"; // Assuming an Issue type exists
 import useAuth from "../../hooks/useAuth";
 import useApiPrivate from "../../hooks/useApiPrivate";
+import { getErrorMessage } from "../../api/getErrorMessage";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { FaUsers, FaUserCheck, FaExclamationTriangle as FaExclamationTriangleIcon, FaCalendarAlt, FaCoffee, FaCalendarWeek, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
@@ -67,9 +68,9 @@ const MainPanel = () => {
             else setError("Could not retrieve your employee details."); // If not found anywhere
         }
 
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error fetching initial dashboard data:", err);
-        setError(`Failed to load dashboard data: ${err.message || 'Please try again.'}`);
+        setError(`Failed to load dashboard data: ${getErrorMessage(err, 'Please try again.')}`);
       } finally {
         setLoading(false);
       }
