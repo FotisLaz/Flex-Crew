@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import useAuth from '../../hooks/useAuth';
 import useApiPrivate from '../../hooks/useApiPrivate';
 import { Employee } from '../../types/Employee';
@@ -8,8 +9,8 @@ import Navbar from '../common/Navbar';
 import Modal from '../common/Modal';
 import { getErrorMessage } from '../../api/getErrorMessage';
 
-// Password validation regex (example: min 8 chars, 1 letter, 1 number)
-const PWD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+// Same rules as registration.
+const PWD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%]).{8,24}$/;
 
 const UserProfile = () => {
   const { userEmail } = useAuth();
@@ -94,7 +95,7 @@ const UserProfile = () => {
       setPasswordSuccess(null);
       
       if (!PWD_REGEX.test(newPassword)) {
-          setPasswordError('Password must be at least 8 characters long and contain at least one letter and one number.');
+          setPasswordError('Password must be 8 to 24 characters with uppercase and lowercase letters, a number and one of ! @ # $ %.');
           return;
       }
       if (newPassword !== confirmPassword) {
@@ -108,30 +109,22 @@ const UserProfile = () => {
 
       setIsChangingPassword(true);
       try {
-          // *** TODO: Replace with actual API call ***
-          console.log('Attempting to change password for:', employee.email);
-          // Example API call structure:
-          // await apiPrivate.put(`/api/employees/change-password`, { 
-          //     email: employee.email, 
-          //     oldPassword,
-          //     newPassword 
-          // });
-          
-          // Simulate API call delay and success/error
-          await new Promise(resolve => setTimeout(resolve, 1500)); 
-          // Simulate success for UI testing:
+          await apiPrivate.put('/api/employees/change-password', {
+              email: employee.email,
+              oldPassword,
+              newPassword,
+          });
           setPasswordSuccess('Password changed successfully!');
-          // Simulate error:
-          // throw new Error("Incorrect old password (Simulated)"); 
-          
-          // Close modal on success after a short delay
           setTimeout(() => {
               setIsModalOpen(false);
-          }, 2000); 
-
+          }, 2000);
       } catch (err) {
-          console.error("Password change error:", err);
-          setPasswordError(getErrorMessage(err, 'Failed to change password.'));
+          // The endpoint answers 400 with a plain-text body when the old password is wrong.
+          setPasswordError(
+              axios.isAxiosError(err) && err.response?.status === 400
+                  ? 'Old password is incorrect.'
+                  : getErrorMessage(err, 'Failed to change password.'),
+          );
       } finally {
           setIsChangingPassword(false);
       }
