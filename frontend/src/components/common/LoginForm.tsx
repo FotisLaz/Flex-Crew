@@ -80,7 +80,6 @@ const LoginForm = () => {
 
       // Check if essential data is present
       if (!accessToken || !refreshToken || !role) {
-        console.error("Login response missing essential data:", authData);
         setErrMsg("Login failed: Incomplete data received from server.");
         return;
       }
@@ -119,7 +118,6 @@ const LoginForm = () => {
         setErrMsg("No Server response. Check connection or server status.");
       } else {
         // Something happened in setting up the request that triggered an Error
-        console.error("Error setting up login request:", err);
         setErrMsg("Login Error: Could not send request.");
       }
       errRef.current?.focus();

@@ -8,20 +8,15 @@ export const registerUser = async (
   secondSurname: string,
   password: string,
 ): Promise<AuthResponse> => {
-  try {
-    // The server always registers new accounts as USER, so no role is sent.
-    const response = await api.post(
-      "/api/auth/register",
-      { email, names, firstSurname, secondSurname, password },
-      {
-        headers: { "Content-Type": "application/json" },
-        withCredentials: true,
-      },
-    );
+  // The server always registers new accounts as USER, so no role is sent.
+  const response = await api.post(
+    "/api/auth/register",
+    { email, names, firstSurname, secondSurname, password },
+    {
+      headers: { "Content-Type": "application/json" },
+      withCredentials: true,
+    },
+  );
 
-    return response.data;
-  } catch (error) {
-    console.error("Error in authentication:", error);
-    throw error;
-  }
+  return response.data;
 };

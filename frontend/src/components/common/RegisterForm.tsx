@@ -118,7 +118,6 @@ const RegisterForm = ({ onRegistered }: RegisterFormProps) => {
       setPwd("");
     } catch (err) {
       const response = axios.isAxiosError(err) ? err.response : undefined;
-      console.error(response);
       if (!response) {
         setErrMsg("No Server response");
       } else if (response.status === 409) {
