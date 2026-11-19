@@ -123,23 +123,7 @@ public class AuthenticationService {
   // noRollbackFor: the 401 thrown on reuse must not roll back the revocations made just before it.
   @Transactional(noRollbackFor = ResponseStatusException.class)
   public AuthenticationResponse refreshToken(String authHeader) {
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-      throw invalidRefreshToken(null);
-    }
-    String refreshToken = authHeader.substring(7);
-    RefreshToken stored;
-    try {
-      // Parsing checks the signature and expiry; only a token we issued and stored is accepted,
-      // which also rejects access tokens sent here.
-      String userEmail = jwtService.extractUsername(refreshToken);
-      stored =
-          refreshTokenRepository
-              .findByTokenHash(sha256(refreshToken))
-              .filter(t -> t.getEmployee().getEmail().equals(userEmail))
-              .orElseThrow(() -> invalidRefreshToken(null));
-    } catch (JwtException | IllegalArgumentException e) {
-      throw invalidRefreshToken(e);
-    }
+    RefreshToken stored = findStoredRefreshToken(authHeader);
     Employee user = stored.getEmployee();
     if (refreshTokenRepository.revokeIfActive(stored.getId()) == 0) {
       // A revoked token was used again, so it was likely copied: end every session of this user.
@@ -155,6 +139,31 @@ public class AuthenticationService {
         .refreshToken(issueRefreshToken(user))
         .role(user.getRole())
         .build();
+  }
+
+  @Transactional
+  public void logout(String authHeader) {
+    RefreshToken stored = findStoredRefreshToken(authHeader);
+    refreshTokenRepository.revokeIfActive(stored.getId());
+    revokeAllUserTokens(stored.getEmployee());
+  }
+
+  private RefreshToken findStoredRefreshToken(String authHeader) {
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+      throw invalidRefreshToken(null);
+    }
+    String refreshToken = authHeader.substring(7);
+    try {
+      // Parsing checks the signature and expiry; only a token we issued and stored is accepted,
+      // which also rejects access tokens sent here.
+      String userEmail = jwtService.extractUsername(refreshToken);
+      return refreshTokenRepository
+          .findByTokenHash(sha256(refreshToken))
+          .filter(t -> t.getEmployee().getEmail().equals(userEmail))
+          .orElseThrow(() -> invalidRefreshToken(null));
+    } catch (JwtException | IllegalArgumentException e) {
+      throw invalidRefreshToken(e);
+    }
   }
 
   private String issueRefreshToken(Employee user) {
