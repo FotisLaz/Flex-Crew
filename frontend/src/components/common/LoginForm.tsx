@@ -138,7 +138,7 @@ const LoginForm = () => {
 
       <span className="text-3xl">WELCOME</span>
       <form
-        className="max-w-md mx-auto flex flex-col items-stretch w-5/12"
+        className="w-full max-w-md mx-auto px-4 flex flex-col items-stretch"
         onSubmit={handleSubmit}
       >
         <div className="relative z-0 w-full mb-5 group">
