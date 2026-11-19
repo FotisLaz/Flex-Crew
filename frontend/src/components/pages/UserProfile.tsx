@@ -3,7 +3,7 @@ import axios from 'axios';
 import useAuth from '../../hooks/useAuth';
 import useApiPrivate from '../../hooks/useApiPrivate';
 import { Employee } from '../../types/Employee';
-import { BsPerson, BsEnvelope, BsPeople, BsCalendar, BsPencil, BsKey, BsEye, BsEyeSlash } from 'react-icons/bs';
+import { BsPerson, BsEnvelope, BsPeople, BsCalendar, BsKey, BsEye, BsEyeSlash } from 'react-icons/bs';
 import Grid from '../common/Grid';
 import Navbar from '../common/Navbar';
 import Modal from '../common/Modal';
@@ -200,10 +200,6 @@ const UserProfile = () => {
                  >
                      <BsKey />
                      Change Password
-                 </button>
-                 <button className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm disabled:opacity-50" disabled>
-                     <BsPencil />
-                     Edit Profile (Coming Soon)
                  </button>
              </div>
 

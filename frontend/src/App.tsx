@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import ProjectsListPage from './pages/ProjectsListPage';
 import ProjectDetailsPage from './pages/ProjectDetailsPage';
-import SettingsPage from "./components/SettingsPage";
 import Dashboard from "./components/pages/Dashboard";
 import MyTeam from "./components/pages/MyTeam";
 import Authentication from "./components/pages/Authentication";
@@ -29,7 +28,6 @@ function App() {
             <Route path="/my-team" element={<MyTeam />} />
             <Route path="/my-schedule" element={<WeeklySchedule />} />
             <Route path="/profile" element={<UserProfile />} />
-            <Route path="/settings" element={<SettingsPage />} />
             
             <Route path="/projects" element={<ProjectsListPage />} />
             <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />

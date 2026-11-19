@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Card from "./Card";
 import { useLocation, useNavigate } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
-import { BsHouseDoor, BsPeople, BsGear, BsBoxArrowRight, BsCalendarWeek, BsListTask, BsGraphUp, BsBriefcase } from "react-icons/bs";
+import { BsHouseDoor, BsPeople, BsBoxArrowRight, BsCalendarWeek, BsListTask, BsGraphUp, BsBriefcase } from "react-icons/bs";
 
 const Navbar = () => {
   const { logout, userRole } = useAuth();
@@ -18,7 +18,6 @@ const Navbar = () => {
   const manageSchedulesPath = "/admin/schedules";
   const adminDashboardPath = "/admin/dashboard";
   const projectsPath = "/projects";
-  const settingsPath = "/settings";
   const authenticationPath = "/authentication";
 
   useEffect(() => {
@@ -35,8 +34,6 @@ const Navbar = () => {
       setActiveLink("adminDashboard");
     } else if (pathname.startsWith(projectsPath)) {
       setActiveLink("projects");
-    } else if (pathname === settingsPath) {
-      setActiveLink("settings");
     } else {
       setActiveLink("");
     }
@@ -64,10 +61,6 @@ const Navbar = () => {
 
   const navigateToProjects = () => {
     navigate(projectsPath);
-  };
-
-  const navigateToSettings = () => {
-    navigate(settingsPath);
   };
 
   const navigateToAuth = () => {
@@ -149,15 +142,6 @@ const Navbar = () => {
               </li>
             </>
           )}
-          <li
-            onClick={navigateToSettings}
-            className={`flex gap-3 items-center group cursor-pointer hover:text-yellow-FlexCrew transition-colors ${
-              activeLink === "settings" ? "text-white" : "text-white/70"
-            }`}
-          >
-            <BsGear className="text-xl" />
-            Settings
-          </li>
         </ul>
       </div>
 
