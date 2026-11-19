@@ -120,7 +120,8 @@ public class AuthenticationService {
     tokenRepository.saveAll(validUserTokens);
   }
 
-  @Transactional
+  // noRollbackFor: the 401 thrown on reuse must not roll back the revocations made just before it.
+  @Transactional(noRollbackFor = ResponseStatusException.class)
   public AuthenticationResponse refreshToken(String authHeader) {
     if (authHeader == null || !authHeader.startsWith("Bearer ")) {
       throw invalidRefreshToken(null);
@@ -139,10 +140,13 @@ public class AuthenticationService {
     } catch (JwtException | IllegalArgumentException e) {
       throw invalidRefreshToken(e);
     }
+    Employee user = stored.getEmployee();
     if (refreshTokenRepository.revokeIfActive(stored.getId()) == 0) {
+      // A revoked token was used again, so it was likely copied: end every session of this user.
+      refreshTokenRepository.revokeAllByEmployeeId(user.getId());
+      revokeAllUserTokens(user);
       throw invalidRefreshToken(null);
     }
-    Employee user = stored.getEmployee();
     String accessToken = jwtService.generateToken(user);
     revokeAllUserTokens(user);
     saveUserToken(user, accessToken);
