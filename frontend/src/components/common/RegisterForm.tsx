@@ -13,7 +13,9 @@ const NAMES_REGEX = /^[A-Za-z]+(?: [A-Za-z]+)?$/;
 const SURNAMES_REGEX = /^[A-Za-z]+(?: [A-Za-z]+)?$/;
 const PWD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%]).{8,24}$/;
 
-const RegisterForm = () => {
+type RegisterFormProps = { onRegistered: () => void };
+
+const RegisterForm = ({ onRegistered }: RegisterFormProps) => {
   const userRef = useRef<HTMLInputElement | null>(null);
   const errRef = useRef<HTMLParagraphElement | null>(null);
 
@@ -61,7 +63,7 @@ const RegisterForm = () => {
   }, [firstSurname]);
 
   useEffect(() => {
-    setValidSecondSurname(SURNAMES_REGEX.test(secondSurname));
+    setValidSecondSurname(!secondSurname || SURNAMES_REGEX.test(secondSurname));
   }, [secondSurname]);
 
   useEffect(() => {
@@ -71,25 +73,30 @@ const RegisterForm = () => {
 
   useEffect(() => {
     setErrMsg("");
-  }, [email, pwd, matchPwd]);
+  }, [email, names, firstSurname, secondSurname, pwd, matchPwd]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // if button enabled with JS hack
-    const emailValidation = EMAIL_REGEX.test(email);
-    const namesValidation = NAMES_REGEX.test(names);
-    const firstSurnameValidation = SURNAMES_REGEX.test(firstSurname);
-    const secondSurnameValidation = SURNAMES_REGEX.test(secondSurname);
-    const pwdValidation = PWD_REGEX.test(pwd);
-
-    if (
-      !emailValidation ||
-      !namesValidation ||
-      !firstSurnameValidation ||
-      !secondSurnameValidation ||
-      !pwdValidation
-    ) {
-      setErrMsg("Invalid Entry");
+    const fields = [
+      { label: "Email address", value: email, required: true, valid: EMAIL_REGEX.test(email) },
+      { label: "Names", value: names, required: true, valid: NAMES_REGEX.test(names) },
+      { label: "1st Surname", value: firstSurname, required: true, valid: SURNAMES_REGEX.test(firstSurname) },
+      { label: "2nd Surname", value: secondSurname, required: false, valid: SURNAMES_REGEX.test(secondSurname) },
+      { label: "Password", value: pwd, required: true, valid: PWD_REGEX.test(pwd) },
+      { label: "Confirm Password", value: matchPwd, required: true, valid: true },
+    ];
+    const missing = fields.filter((f) => f.required && !f.value.trim());
+    if (missing.length > 0) {
+      setErrMsg(`Please fill in: ${missing.map((f) => f.label).join(", ")}`);
+      return;
+    }
+    const invalid = fields.filter((f) => f.value && !f.valid);
+    if (invalid.length > 0) {
+      setErrMsg(`Please check: ${invalid.map((f) => f.label).join(", ")}`);
+      return;
+    }
+    if (pwd !== matchPwd) {
+      setErrMsg("Passwords do not match");
       return;
     }
 
@@ -114,8 +121,10 @@ const RegisterForm = () => {
       console.error(response);
       if (!response) {
         setErrMsg("No Server response");
-      } else if (response.status === 403) {
-        setErrMsg("Email taken");
+      } else if (response.status === 409) {
+        setErrMsg("This email is already registered");
+      } else if (response.status === 400) {
+        setErrMsg("Please fill in all required fields");
       } else {
         setErrMsg("Register failed");
       }
@@ -126,24 +135,29 @@ const RegisterForm = () => {
   return (
     <>
       {success ? (
-        <section>
-          <h1>Success!</h1>
-          <p>
-            <a href="#">Sign In</a>
-          </p>
+        <section className="flex flex-col items-center gap-2">
+          <h1 className="text-2xl">Account created</h1>
+          <button
+            type="button"
+            onClick={onRegistered}
+            className="text-gray-300 hover:text-yellow-FlexCrew underline"
+          >
+            Sign in
+          </button>
         </section>
       ) : (
         <>
           <p
             ref={errRef}
+            role="alert"
             className={errMsg ? "errmsg text-red-300" : "offscreen"}
-            aria-live="assertive"
           >
             {errMsg}
           </p>
 
           <span className="text-3xl">JOIN US</span>
           <form
+            noValidate
             className="max-w-md mx-auto flex flex-col items-stretch w-5/12"
             onSubmit={handleSubmit}
           >
@@ -206,7 +220,6 @@ const RegisterForm = () => {
                 placeholder=" "
                 required
                 autoComplete="off"
-                ref={userRef}
                 onChange={(e) => setNames(e.target.value)}
                 value={names}
                 aria-invalid={validNames ? "false" : "true"}
@@ -258,7 +271,6 @@ const RegisterForm = () => {
                 placeholder=" "
                 required
                 autoComplete="off"
-                ref={userRef}
                 onChange={(e) => setFirstSurname(e.target.value)}
                 value={firstSurname}
                 aria-invalid={validFirstSurname ? "false" : "true"}
@@ -293,9 +305,7 @@ const RegisterForm = () => {
                 name="floating_secondSurname"
                 id="floating_secondSurname"
                 placeholder=" "
-                required
                 autoComplete="off"
-                ref={userRef}
                 onChange={(e) => setSecondSurname(e.target.value)}
                 value={secondSurname}
                 aria-invalid={validSecondSurname ? "false" : "true"}
@@ -308,7 +318,7 @@ const RegisterForm = () => {
                 htmlFor="floating_secondSurname"
                 className="peer-focus:font-medium absolute left-1/2 text-sm text-gray-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-1/2 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto peer-focus:text-yellow-600 peer-focus:dark:text-yellow-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
               >
-                2nd Surname
+                2nd Surname (optional)
                 <FontAwesomeIcon
                   icon={faCheck}
                   className={
@@ -444,16 +454,8 @@ const RegisterForm = () => {
             </div>
 
             <button
+              type="submit"
               className="text-black bg-yellow-FlexCrew hover:bg-yellow-600 focus:ring-1 focus:outline-none focus:ring-yellow-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center"
-              disabled={
-                !validEmail ||
-                !validPwd ||
-                !validMatch ||
-                !validFirstSurname ||
-                !validSecondSurname
-                  ? true
-                  : false
-              }
             >
               REGISTER
             </button>
