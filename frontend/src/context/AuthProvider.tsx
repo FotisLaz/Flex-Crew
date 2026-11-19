@@ -1,5 +1,5 @@
 import { ReactNode, createContext, useCallback, useEffect, useState } from "react";
-import { onTokensChanged } from "../api/axiosConfig";
+import api, { onTokensChanged } from "../api/axiosConfig";
 
 // Define the shape of the context data
 interface AuthContextProps {
@@ -54,6 +54,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Logout function: Clears state and localStorage
   const logout = useCallback(() => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      // Best effort: the local session ends either way, and a token the server could not revoke
+      // still expires.
+      api
+        .post('/api/auth/logout', {}, { headers: { Authorization: `Bearer ${refreshToken}` } })
+        .catch(() => undefined);
+    }
     setToken(null);
     setTokenForRefresh(null);
     setUserEmail(null);
