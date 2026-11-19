@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS "Flex-Crew-v1"."Project_Employee_Assignments" CASCADE;
 DROP TABLE IF EXISTS "Flex-Crew-v1"."Project_Required_Teams" CASCADE;
 DROP TABLE IF EXISTS "Flex-Crew-v1"."Projects" CASCADE;
 DROP TABLE IF EXISTS "Flex-Crew-v1"."Tokens" CASCADE;
+DROP TABLE IF EXISTS "Flex-Crew-v1"."Refresh_Tokens" CASCADE;
 DROP TABLE IF EXISTS "Flex-Crew-v1"."Records" CASCADE;
 DROP TABLE IF EXISTS "Flex-Crew-v1"."Issues" CASCADE;
 DROP TABLE IF EXISTS "Flex-Crew-v1"."Employees" CASCADE;
@@ -95,6 +96,17 @@ CREATE TABLE IF NOT EXISTS "Flex-Crew-v1"."Tokens"
     PRIMARY KEY (token_id)
 );
 
+CREATE TABLE IF NOT EXISTS "Flex-Crew-v1"."Refresh_Tokens"
+(
+    refresh_token_id serial NOT NULL,
+    token_hash character varying(64) NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    revoked boolean NOT NULL,
+    fk_employee integer NOT NULL,
+    PRIMARY KEY (refresh_token_id),
+    UNIQUE (token_hash)
+);
+
 ALTER TABLE IF EXISTS "Flex-Crew-v1"."Employees"
     ADD FOREIGN KEY (fk_team)
     REFERENCES "Flex-Crew-v1"."Teams" (team_id) MATCH SIMPLE
@@ -158,6 +170,14 @@ ALTER TABLE IF EXISTS "Flex-Crew-v1"."Tokens"
     ON DELETE NO ACTION
     NOT VALID;
 
+
+ALTER TABLE IF EXISTS "Flex-Crew-v1"."Refresh_Tokens"
+    ADD FOREIGN KEY (fk_employee)
+    REFERENCES "Flex-Crew-v1"."Employees" (employee_id) MATCH SIMPLE
+    ON UPDATE NO ACTION
+    ON DELETE NO ACTION
+    NOT VALID;
+
 END;
 
 -- Populate database
@@ -169,6 +189,7 @@ TRUNCATE TABLE  "Flex-Crew-v1"."Schedules"  RESTART IDENTITY CASCADE;
 TRUNCATE TABLE  "Flex-Crew-v1"."Records"  RESTART IDENTITY CASCADE;
 TRUNCATE TABLE  "Flex-Crew-v1"."Issue_statuses"  RESTART IDENTITY CASCADE;
 TRUNCATE TABLE  "Flex-Crew-v1"."Tokens" RESTART IDENTITY CASCADE;
+TRUNCATE TABLE  "Flex-Crew-v1"."Refresh_Tokens" RESTART IDENTITY CASCADE;
 
 -- Truncate new project-related tables before inserting sample data
 -- TRUNCATE TABLE  "Flex-Crew-v1"."Projects" RESTART IDENTITY CASCADE;

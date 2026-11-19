@@ -1,11 +1,13 @@
 package com.lazardev.FlexCrew.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -38,6 +40,8 @@ import com.lazardev.FlexCrew.security.auth.AuthenticationService;
 import com.lazardev.FlexCrew.security.config.ApplicationConfig;
 import com.lazardev.FlexCrew.security.config.JwtService;
 import com.lazardev.FlexCrew.security.config.SecurityConfiguration;
+import com.lazardev.FlexCrew.security.token.RefreshToken;
+import com.lazardev.FlexCrew.security.token.RefreshTokenRepository;
 import com.lazardev.FlexCrew.security.token.Token;
 import com.lazardev.FlexCrew.security.token.TokenRepository;
 import com.lazardev.FlexCrew.service.AnalyticsService;
@@ -49,9 +53,15 @@ import com.jayway.jsonpath.JsonPath;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.crypto.SecretKey;
 import org.junit.jupiter.api.BeforeEach;
@@ -110,6 +120,7 @@ class SecurityRulesTests {
 
   @MockBean private EmployeeRepository employeeRepository;
   @MockBean private TokenRepository tokenRepository;
+  @MockBean private RefreshTokenRepository refreshTokenRepository;
   @MockBean private RecordService recordService;
   @MockBean private ProjectService projectService;
   @MockBean private ScheduleService scheduleService;
@@ -119,11 +130,28 @@ class SecurityRulesTests {
   private Employee admin; // id 2, ADMIN
   private Employee other; // id 3, USER
 
+  /** In-memory stand-in for the Refresh_Tokens table, keyed by token hash. */
+  private final Map<String, RefreshToken> refreshTokenTable = new HashMap<>();
+
   @BeforeEach
   void setUp() {
     user = employee(1, "user@test.local", Role.USER);
     admin = employee(2, "admin@test.local", Role.ADMIN);
     other = employee(3, "other@test.local", Role.USER);
+
+    given(refreshTokenRepository.save(any(RefreshToken.class)))
+        .willAnswer(
+            invocation -> {
+              RefreshToken row = invocation.getArgument(0);
+              if (row.getId() == null) {
+                row.setId(refreshTokenTable.size() + 1);
+              }
+              refreshTokenTable.put(row.getTokenHash(), row);
+              return row;
+            });
+    given(refreshTokenRepository.findByTokenHash(anyString()))
+        .willAnswer(
+            invocation -> Optional.ofNullable(refreshTokenTable.get(invocation.getArgument(0))));
   }
 
   private static Employee employee(int id, String email, Role role) {
@@ -880,8 +908,7 @@ class SecurityRulesTests {
 
   @Test
   void refreshToken_onlyAffectsTheTokensOwner() throws Exception {
-    given(employeeRepository.findByEmail(user.getEmail())).willReturn(Optional.of(user));
-    String refreshToken = jwtService.generateRefreshToken(user);
+    String refreshToken = storedRefreshToken(user);
 
     MvcResult result =
         mockMvc
@@ -906,6 +933,71 @@ class SecurityRulesTests {
   void tokensIssuedInTheSameSecond_areUnique() {
     assertNotEquals(jwtService.generateRefreshToken(user), jwtService.generateRefreshToken(user));
     assertNotEquals(jwtService.generateToken(user), jwtService.generateToken(user));
+  }
+
+  private static String sha256Hex(String value) throws Exception {
+    return HexFormat.of()
+        .formatHex(
+            MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+  }
+
+  /** Signs a real refresh token and stores its hash, as a login would. */
+  private String storedRefreshToken(Employee employee) throws Exception {
+    String refreshToken = jwtService.generateRefreshToken(employee);
+    refreshTokenRepository.save(
+        RefreshToken.builder()
+            .employee(employee)
+            .tokenHash(sha256Hex(refreshToken))
+            .expiresAt(Instant.now().plusSeconds(3600))
+            .build());
+    return refreshToken;
+  }
+
+  private String loginAndGetRefreshToken(Employee employee) throws Exception {
+    given(employeeRepository.findByEmail(employee.getEmail())).willReturn(Optional.of(employee));
+    MvcResult result =
+        mockMvc
+            .perform(
+                post("/api/auth/authenticate")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {"email":"%s","password":"%s"}"""
+                            .formatted(employee.getEmail(), PASSWORD)))
+            .andExpect(status().isOk())
+            .andReturn();
+    return JsonPath.read(result.getResponse().getContentAsString(), "$.refresh_token");
+  }
+
+  @Test
+  void login_storesOnlyTheSha256HashOfTheRefreshToken() throws Exception {
+    String refreshToken = loginAndGetRefreshToken(user);
+
+    RefreshToken row = refreshTokenTable.get(sha256Hex(refreshToken));
+    assertNotNull(row, "the refresh token's SHA-256 hash should be stored");
+    assertEquals(user, row.getEmployee());
+    assertFalse(row.isRevoked());
+    assertFalse(refreshTokenTable.containsKey(refreshToken), "the raw token must not be stored");
+  }
+
+  @Test
+  void refreshToken_storedToken_returns200() throws Exception {
+    refresh("Bearer " + loginAndGetRefreshToken(user))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.access_token").isNotEmpty());
+  }
+
+  @Test
+  void refreshToken_withAccessToken_returns401() throws Exception {
+    refresh(bearer(user)).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void refreshToken_validlySignedButNeverStored_returns401() throws Exception {
+    given(employeeRepository.findByEmail(user.getEmail())).willReturn(Optional.of(user));
+
+    refresh("Bearer " + jwtService.generateRefreshToken(user))
+        .andExpect(status().isUnauthorized());
   }
 
   private ResultActions refresh(String authHeader) throws Exception {
