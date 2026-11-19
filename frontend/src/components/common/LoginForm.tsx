@@ -85,11 +85,7 @@ const LoginForm = () => {
       }
 
       // Set auth context: pass tokens, the email entered in the form, and the role from response
-      login(accessToken, refreshToken, userEmail, role); 
-      
-      // Post a record every login (Assuming postRecord uses the email from the context or token)
-      // If postRecord needs the token directly, ensure it's passed correctly
-      // postRecord(userEmail, accessToken); // Consider if this is still needed or handled differently
+      login(accessToken, refreshToken, userEmail, role);
 
       // Clear state and controlled inputs
       setUserEmail("");

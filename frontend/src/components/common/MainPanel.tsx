@@ -7,6 +7,7 @@ import useAuth from "../../hooks/useAuth";
 import useApiPrivate from "../../hooks/useApiPrivate";
 import { getErrorMessage } from "../../api/getErrorMessage";
 import { useNavigate } from "react-router-dom";
+import CheckInCard from "./CheckInCard";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { FaUsers, FaExclamationTriangle as FaExclamationTriangleIcon, FaCalendarAlt, FaCalendarWeek, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
@@ -142,6 +143,9 @@ const MainPanel = () => {
             {currentEmployee?.schedule && <p className="text-xs text-gray-400">{currentEmployee.schedule.startTime} - {currentEmployee.schedule.endTime}</p>}
           </div>
         </div>
+        {currentEmployee && (
+          <CheckInCard api={apiPrivate} employeeId={currentEmployee.id} email={currentEmployee.email} />
+        )}
         {/* The team schedule page is admin-only; for anyone else this tile would just bounce back. */}
         {authContext.userRole === "ADMIN" && (
           <div
