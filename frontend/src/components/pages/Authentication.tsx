@@ -15,7 +15,6 @@ const Authentication = () => {
     backgroundRepeat: "no-repeat",
     backgroundPosition: "right center",
     backgroundSize: "contain",
-    height: "100vh",
   };
 
   const [whichForm, setWhichForm] = useState(true);
@@ -24,8 +23,8 @@ const Authentication = () => {
   };
 
   return (
-    <div style={svgBackground} className="flex flex-row gap-2">
-      <div className="flex flex-col flex-1 text-white gap-4 items-center justify-center">
+    <div className="flex flex-row min-h-screen bg-black">
+      <div className="flex flex-col flex-1 text-white gap-4 items-center justify-center py-8">
         <img src={minimalLogo} className="w-16 h-fit" alt="Logo" />
 
         {whichForm ? <LoginForm /> : <RegisterForm onRegistered={() => setWhichForm(true)} />}
@@ -39,12 +38,9 @@ const Authentication = () => {
         </div>
       </div>
 
-      <div className="flex flex-1">
-        <img
-          src={teamImage}
-          className="w-96 h-fit relative top-56 left-44"
-          alt="Team time"
-        />
+      {/* The yellow shape is the background of this column only, so it can never cover the form. */}
+      <div style={svgBackground} className="hidden lg:flex flex-1 items-center justify-center">
+        <img src={teamImage} className="w-3/4 max-w-sm h-fit" alt="Team time" />
       </div>
     </div>
   );
