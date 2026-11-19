@@ -1,11 +1,10 @@
 import { Outlet } from "react-router-dom";
 import { useState, useEffect } from "react";
-import useRefreshToken from "../../hooks/useRefreshToken";
+import { refreshTokens } from "../../api/axiosConfig";
 import useAuth from "../../hooks/useAuth";
 
 const PersistLogin = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const refresh = useRefreshToken();
   const { isAuthenticated, token, tokenForRefresh } = useAuth();
 
   useEffect(() => {
@@ -17,7 +16,7 @@ const PersistLogin = () => {
     const verifyRefreshToken = async () => {
       try {
         console.log("Attempting to refresh token...");
-        await refresh();
+        await refreshTokens();
       } catch (err) {
         console.error("Failed to refresh token:", err);
       } finally {

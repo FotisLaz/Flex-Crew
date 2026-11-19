@@ -1,4 +1,5 @@
-import { ReactNode, createContext, useEffect, useState } from "react";
+import { ReactNode, createContext, useCallback, useEffect, useState } from "react";
+import { onTokensChanged } from "../api/axiosConfig";
 
 // Define the shape of the context data
 interface AuthContextProps {
@@ -9,7 +10,6 @@ interface AuthContextProps {
   userRole: string | null;
   login: (token: string, refreshToken: string, userEmail: string, userRole: string) => void;
   logout: () => void;
-  setRefreshToken: (token: string) => void;
 }
 
 // Create the context with an initial undefined value
@@ -53,20 +53,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Logout function: Clears state and localStorage
-  const logout = () => {
+  const logout = useCallback(() => {
     setToken(null);
     setTokenForRefresh(null);
     setUserEmail(null);
     setUserRole(null);
     // LocalStorage is cleared by the useEffect hook
-  };
+  }, []);
 
-  // Function to update only the access token (e.g., after refresh)
-  const setRefreshedAccessToken = (newToken: string) => {
-    // Avoid clearing other state by just setting the token
-    setToken(newToken);
-    localStorage.setItem('token', newToken);
-  };
+  // Keep state in sync with token refreshes done by the axios interceptor
+  useEffect(
+    () =>
+      onTokensChanged((tokens) => {
+        if (tokens) {
+          setToken(tokens.accessToken);
+          setTokenForRefresh(tokens.refreshToken);
+        } else {
+          logout();
+        }
+      }),
+    [logout],
+  );
 
   return (
     <AuthContext.Provider
@@ -78,7 +85,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         userRole,
         login,
         logout,
-        setRefreshToken: setRefreshedAccessToken,
       }}
     >
       {children}
