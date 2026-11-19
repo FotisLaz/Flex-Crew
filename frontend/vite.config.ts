@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import * as path from 'path'
@@ -19,5 +20,9 @@ export default defineConfig({
         secure: false,
       }
     }
-  }
+  },
+  test: {
+    // Node 25+ defines its own localStorage global, which hides the one jsdom provides.
+    poolOptions: { forks: { execArgv: ['--no-experimental-webstorage'] } },
+  },
 })
