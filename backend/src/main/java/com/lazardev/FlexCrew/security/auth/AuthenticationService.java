@@ -1,6 +1,5 @@
 package com.lazardev.FlexCrew.security.auth;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lazardev.FlexCrew.dao.EmployeeRepository;
 import com.lazardev.FlexCrew.entity.Employee;
 import com.lazardev.FlexCrew.entity.Role;
@@ -8,16 +7,15 @@ import com.lazardev.FlexCrew.security.config.JwtService;
 import com.lazardev.FlexCrew.security.token.Token;
 import com.lazardev.FlexCrew.security.token.TokenRepository;
 import com.lazardev.FlexCrew.security.token.TokenType;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
+import io.jsonwebtoken.JwtException;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class AuthenticationService {
@@ -111,29 +109,32 @@ public class AuthenticationService {
     tokenRepository.saveAll(validUserTokens);
   }
 
-  public void refreshToken(HttpServletRequest request, HttpServletResponse response)
-      throws IOException {
-    final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-    final String refreshToken;
-    final String userEmail;
+  public AuthenticationResponse refreshToken(String authHeader) {
     if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-      return;
+      throw invalidRefreshToken(null);
     }
-    refreshToken = authHeader.substring(7);
-    userEmail = jwtService.extractUsername(refreshToken);
-    if (userEmail != null) {
-      Employee user = this.repository.findByEmail(userEmail).orElseThrow();
-      if (jwtService.isTokenValid(refreshToken, user)) {
-        String accessToken = jwtService.generateToken(user);
-        revokeAllUserTokens(user);
-        saveUserToken(user, accessToken);
-        AuthenticationResponse authResponse = AuthenticationResponse.builder()
-            .accessToken(accessToken)
-            .refreshToken(refreshToken)
-            .role(user.getRole())
-            .build();
-        new ObjectMapper().writeValue(response.getOutputStream(), authResponse);
+    String refreshToken = authHeader.substring(7);
+    Employee user;
+    try {
+      String userEmail = jwtService.extractUsername(refreshToken);
+      user = repository.findByEmail(userEmail).orElseThrow(() -> invalidRefreshToken(null));
+      if (!jwtService.isTokenValid(refreshToken, user)) {
+        throw invalidRefreshToken(null);
       }
+    } catch (JwtException | IllegalArgumentException e) {
+      throw invalidRefreshToken(e);
     }
+    String accessToken = jwtService.generateToken(user);
+    revokeAllUserTokens(user);
+    saveUserToken(user, accessToken);
+    return AuthenticationResponse.builder()
+        .accessToken(accessToken)
+        .refreshToken(refreshToken)
+        .role(user.getRole())
+        .build();
+  }
+
+  private static ResponseStatusException invalidRefreshToken(Throwable cause) {
+    return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token", cause);
   }
 }

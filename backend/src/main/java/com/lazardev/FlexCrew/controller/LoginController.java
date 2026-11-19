@@ -4,13 +4,12 @@ import com.lazardev.FlexCrew.security.auth.AuthenticationRequest;
 import com.lazardev.FlexCrew.security.auth.AuthenticationResponse;
 import com.lazardev.FlexCrew.security.auth.AuthenticationService;
 import com.lazardev.FlexCrew.security.auth.RegisterRequest;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,8 +36,8 @@ public class LoginController {
   }
 
   @PostMapping("/refresh-token")
-  public void refreshToken(HttpServletRequest request, HttpServletResponse response)
-      throws IOException {
-    authenticationService.refreshToken(request, response);
+  public ResponseEntity<AuthenticationResponse> refreshToken(
+      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader) {
+    return ResponseEntity.ok(authenticationService.refreshToken(authHeader));
   }
 }
