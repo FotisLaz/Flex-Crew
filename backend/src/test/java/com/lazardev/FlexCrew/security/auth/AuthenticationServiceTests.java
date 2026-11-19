@@ -11,14 +11,18 @@ import com.lazardev.FlexCrew.security.token.TokenType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Collections;
 import java.util.Date;
@@ -115,16 +119,48 @@ class AuthenticationServiceTests {
     }
 
     @Test
-    void register_shouldThrowRuntimeException_whenEmailAlreadyExists() {
+    void register_shouldReturnConflict_whenEmailAlreadyExists() {
         when(employeeRepository.findByEmail(registerRequest.getEmail())).thenReturn(Optional.of(employee));
 
-        Exception exception = assertThrows(RuntimeException.class, () -> {
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
             authenticationService.register(registerRequest);
         });
 
-        assertEquals("Email already exists", exception.getMessage());
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         verify(employeeRepository, never()).save(any(Employee.class));
         verify(tokenRepository, never()).save(any(Token.class));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"names", "firstSurname", "email", "password"})
+    void register_shouldReturnBadRequest_whenARequiredFieldIsBlank(String field) {
+        switch (field) {
+            case "names" -> registerRequest.setNames(" ");
+            case "firstSurname" -> registerRequest.setFirstSurname("");
+            case "email" -> registerRequest.setEmail(null);
+            default -> registerRequest.setPassword("");
+        }
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
+            authenticationService.register(registerRequest);
+        });
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        verify(employeeRepository, never()).save(any(Employee.class));
+    }
+
+    @Test
+    void register_shouldStoreABlankSecondSurnameAsNull() {
+        registerRequest.setSecondSurname("  ");
+        when(employeeRepository.findByEmail(registerRequest.getEmail())).thenReturn(Optional.empty());
+        when(employeeRepository.save(any(Employee.class))).thenReturn(employee);
+        when(jwtService.generateRefreshToken(any(Employee.class))).thenReturn("refreshToken");
+        when(jwtService.extractClaim(eq("refreshToken"), any())).thenReturn(new Date());
+
+        authenticationService.register(registerRequest);
+
+        verify(employeeRepository).save(employeeArgumentCaptor.capture());
+        assertNull(employeeArgumentCaptor.getValue().getSecondSurname());
     }
 
     @Test

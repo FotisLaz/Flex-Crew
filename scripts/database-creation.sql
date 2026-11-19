@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS "Flex-Crew-v1"."Employees"
     employee_id serial NOT NULL,
     names character varying(50) NOT NULL,
     first_surname character varying(50) NOT NULL,
-    second_surname character varying(50) NOT NULL,
+    second_surname character varying(50),
     email character varying(255) NOT NULL,
     image_url character varying(255),
     role character varying(20) NOT NULL,

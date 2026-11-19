@@ -23,6 +23,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -52,13 +53,21 @@ public class AuthenticationService {
   }
 
   public AuthenticationResponse register(RegisterRequest request) {
+    if (!StringUtils.hasText(request.getNames())
+        || !StringUtils.hasText(request.getFirstSurname())
+        || !StringUtils.hasText(request.getEmail())
+        || !StringUtils.hasText(request.getPassword())) {
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST, "Names, first surname, email and password are required");
+    }
     if (repository.findByEmail(request.getEmail()).isPresent()) {
-      throw new RuntimeException("Email already exists");
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
     }
     Employee user = Employee.builder()
         .names(request.getNames())
         .firstSurname(request.getFirstSurname())
-        .secondSurname(request.getSecondSurname())
+        .secondSurname(
+            StringUtils.hasText(request.getSecondSurname()) ? request.getSecondSurname() : null)
         .email(request.getEmail())
         .password(passwordEncoder.encode(request.getPassword()))
         .role(Role.USER) // never trust a role from the client
