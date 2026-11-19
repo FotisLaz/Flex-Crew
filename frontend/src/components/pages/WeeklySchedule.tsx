@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import axios from 'axios';
+import useApiPrivate from '../../hooks/useApiPrivate';
 import { Schedule } from '../../types/Schedule';
 
 const localizer = momentLocalizer(moment);
@@ -62,12 +62,13 @@ const WeeklySchedule: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const apiPrivate = useApiPrivate();
 
   useEffect(() => {
     const fetchSchedule = async () => {
       try {
         setLoading(true);
-        const response = await axios.get<Schedule[]>('/api/schedules/employee/current');
+        const response = await apiPrivate.get<Schedule[]>('/api/schedules/employee/current');
         
         // Process the schedule data into calendar events
         const calendarEvents = processScheduleData(response.data);
@@ -82,7 +83,7 @@ const WeeklySchedule: React.FC = () => {
     };
 
     fetchSchedule();
-  }, []);
+  }, [apiPrivate]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading your schedule...</div>;
