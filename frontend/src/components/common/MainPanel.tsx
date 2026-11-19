@@ -5,11 +5,9 @@ import { Employee } from "../../types/Employee";
 import { Issue } from "../../types/Issue"; // Assuming an Issue type exists
 import useAuth from "../../hooks/useAuth";
 import useApiPrivate from "../../hooks/useApiPrivate";
-import { Link, useNavigate } from "react-router-dom";
-import { BsCalendar, BsCupHot, BsChevronLeft, BsChevronRight, BsExclamationTriangle, BsPeople, BsPersonCheck } from "react-icons/bs"; // Removed BsBell, Added BsPeople, BsPersonCheck
+import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { FaUsers, FaUserCheck, FaExclamationTriangle as FaExclamationTriangleIcon, FaCalendarAlt, FaCoffee, FaCalendarWeek, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import Card from './Card'; // Assuming default export for Card
 
 // Helper function to count employees per team
 const countEmployeesByTeam = (employees: Employee[]) => {
@@ -195,7 +193,7 @@ const MainPanel = () => {
                   contentStyle={{fontSize: '12px', padding: '8px', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)'}} 
                 />
                 <Bar dataKey="count" name="Employees" radius={[6, 6, 0, 0]}>
-                   {employeesPerTeamData.map((entry, index) => (
+                   {employeesPerTeamData.map((_entry, index) => (
                       <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                    ))}
                 </Bar> 

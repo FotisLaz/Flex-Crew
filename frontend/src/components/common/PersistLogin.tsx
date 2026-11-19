@@ -5,7 +5,7 @@ import useAuth from "../../hooks/useAuth";
 
 const PersistLogin = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const { isAuthenticated, token, tokenForRefresh } = useAuth();
+  const { isAuthenticated, token } = useAuth();
 
   useEffect(() => {
     // Check if we need to attempt refreshing token

@@ -3,7 +3,6 @@ import { Employee } from "../../types/Employee";
 import { Team } from "../../types/Team";
 import useApiPrivate from "../../hooks/useApiPrivate";
 import { useNavigate, useLocation } from "react-router-dom";
-import logo from "../../assets/images/logo.webp";
 import { BsSearch, BsPerson, BsPeople } from "react-icons/bs";
 
 interface EmployeesProps {
