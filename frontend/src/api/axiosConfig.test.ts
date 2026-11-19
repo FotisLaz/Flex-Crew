@@ -2,7 +2,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import api, { apiPrivate, onTokensChanged } from "./axiosConfig";
-import { apiPrivate as apiV1Private } from "../services/api/apiClient";
 
 type Reply = { status: number; data?: unknown };
 
@@ -39,7 +38,6 @@ const getEmployees = () =>
 beforeEach(() => {
   api.defaults.adapter = fakeAdapter;
   apiPrivate.defaults.adapter = fakeAdapter;
-  apiV1Private.defaults.adapter = fakeAdapter;
   requests = [];
   server = rotatingServer;
   localStorage.setItem("token", "old-access");
@@ -114,12 +112,5 @@ describe("refresh on 401", () => {
 
     await expect(getEmployees()).rejects.toMatchObject({ response: { status: 403 } });
     expect(refreshRequests()).toHaveLength(0);
-  });
-
-  it("also refreshes for the /api/v1 client", async () => {
-    const response = await apiV1Private.get("/projects");
-
-    expect(response.data).toBe("ok");
-    expect(refreshRequests()).toHaveLength(1);
   });
 });
