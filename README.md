@@ -126,31 +126,25 @@ To get started with this project, follow these steps:
 7. Access the application.
 8. Begin optimizing schedules!
 
-## Dockerization
+## Running with Docker
 
-This project includes `Dockerfile` and `docker-compose.yaml` to facilitate containerized development and deployment.
+`docker-compose.yaml` runs three services:
 
-- **`Dockerfile`**: A multi-stage Dockerfile that builds both the frontend and backend into a final application image.
-- **`docker-compose.yaml`**: Orchestrates the application services (backend, frontend development server, database) for a local development environment.
+- `db`: PostgreSQL 16. On the first start of an empty volume it runs `scripts/database-creation.sql`, which creates the `Flex-Crew-v1` schema and sample data.
+- `backend`: the Spring Boot API (`backend/Dockerfile`, Java 17 on Eclipse Temurin). It is not published to the host.
+- `frontend`: the Vite build served by nginx (`frontend/Dockerfile`), which also proxies `/api` to the backend.
 
-### Running with Docker Compose (for Development)
+Each service has a healthcheck, and each one starts only after the service it depends on is healthy. The backend reads its configuration from environment variables, so it does not need `env.properties` in Docker.
 
-1.  Ensure Docker and Docker Compose are installed.
-2.  Navigate to the project root.
-3.  If you haven't already, copy `backend/src/main/resources/env.properties.example` to `backend/src/main/resources/env.properties` and fill in your database details and `SECRET_KEY` in your local `env.properties`. The `docker-compose` setup for the backend expects this file to exist and be correctly populated for database connectivity.
-4.  Build and start all services:
-    ```bash
-    docker-compose up --build
-    ```
-5.  Access:
-    - Backend API: `http://localhost:8081` (Note: Port changed to 8081 as per backend config)
-    - Frontend Dev Server: `http://localhost:3000`
-6.  Stop services:
-    ```bash
-    docker-compose down
-    ```
+1. Copy `.env.example` to `.env` and fill it in. `SECRET_KEY` must be a base64 key of at least 256 bits, for example from `openssl rand -base64 32`. `.env` is gitignored.
+2. Build and start everything:
+   ```bash
+   docker compose up --build
+   ```
+3. Open http://localhost:5173.
+4. Stop with `docker compose down`. Add `--volumes` to also delete the database volume.
 
-For more detailed instructions on manual Docker builds or production deployments, refer to the Docker documentation and the contents of the `Dockerfile`.
+The sample data is loaded only when the database volume is empty.
 
 ## License
 
