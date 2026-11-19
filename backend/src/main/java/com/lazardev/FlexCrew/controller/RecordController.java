@@ -1,8 +1,13 @@
 package com.lazardev.FlexCrew.controller;
 
+import com.lazardev.FlexCrew.entity.Employee;
 import com.lazardev.FlexCrew.entity.Record;
+import com.lazardev.FlexCrew.service.EmployeeService;
 import com.lazardev.FlexCrew.service.RecordService;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,10 +25,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class RecordController {
 
   private RecordService recordService;
+  private EmployeeService employeeService;
 
   @Autowired
-  public RecordController(RecordService theRecordService) {
+  public RecordController(RecordService theRecordService, EmployeeService theEmployeeService) {
     this.recordService = theRecordService;
+    this.employeeService = theEmployeeService;
   }
 
   // Get records by employee id (own records, or any employee's for an admin)
@@ -80,38 +87,54 @@ public class RecordController {
     }
   }
 
-  // Post (save) a new record: for yourself, or for anyone if you are an admin correcting attendance
+  // Check in: for yourself, or for any employee if you are an admin. Only employee.id is read from
+  // the body; the time and schedule come from the server so a client cannot pick a time that passes
+  // the check-in window.
   @PostMapping
   @PreAuthorize("hasRole('ADMIN') or #theRecord.employee?.id == principal.id")
   public ResponseEntity<?> saveRecord(@RequestBody Record theRecord) {
     try {
-      Integer id = theRecord.getEmployee().getId();
+      Optional<Employee> employee =
+          employeeService.getEmployeeById(theRecord.getEmployee().getId());
+      if (employee.isEmpty()) {
+        return message(HttpStatus.NOT_FOUND, "Employee not found");
+      }
+      if (employee.get().getSchedule() == null) {
+        return message(HttpStatus.BAD_REQUEST, "No schedule assigned");
+      }
+      Record checkIn =
+          Record.builder()
+              .employee(employee.get())
+              .schedule(employee.get().getSchedule())
+              .startTime(OffsetDateTime.now())
+              .build();
 
       // Is the user posting only once a day?
-      if (recordService.isSavingRestrictedToday(id)) {
-        return new ResponseEntity<>("You can only post once a day", HttpStatus.BAD_REQUEST);
+      if (recordService.isSavingRestrictedToday(employee.get().getId())) {
+        return message(HttpStatus.BAD_REQUEST, "You can only check in once a day");
       }
 
       // Is the user posting within time?
-      if (recordService.isPostedOutOfTime(theRecord)) {
-        return new ResponseEntity<>(
-            "You can only post up to 60 minutes after your start time", HttpStatus.BAD_REQUEST);
+      if (recordService.isPostedOutOfTime(checkIn)) {
+        return message(
+            HttpStatus.BAD_REQUEST, "You can only check in up to 60 minutes after your start time");
       }
 
       // Is the user posting before expected?
-      if (recordService.isPostedBeforeExpectedTime(theRecord)) {
-        return new ResponseEntity<>(
-            "You can only post up to 60 minutes earlier than your start time",
-            HttpStatus.BAD_REQUEST);
+      if (recordService.isPostedBeforeExpectedTime(checkIn)) {
+        return message(
+            HttpStatus.BAD_REQUEST,
+            "You can only check in up to 60 minutes before your start time");
       }
 
-      // If the employee can post a record today:
-      // Set the ID to zero/0 just in case it's different in the JSON.
-      theRecord.setId(0);
-      Record savedRecord = recordService.saveRecord(theRecord);
+      Record savedRecord = recordService.saveRecord(checkIn);
       return new ResponseEntity<>(savedRecord, HttpStatus.CREATED);
     } catch (Exception e) {
       return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
+  }
+
+  private static ResponseEntity<Map<String, String>> message(HttpStatus status, String message) {
+    return ResponseEntity.status(status).body(Map.of("message", message));
   }
 }

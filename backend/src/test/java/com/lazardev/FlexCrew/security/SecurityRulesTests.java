@@ -729,13 +729,72 @@ public class SecurityRulesTests {
   }
 
   // ---------------------------------------------------------------------------------------------
-  // Posting attendance: only for yourself, or by an admin (to correct records)
+  // Checking in: only for yourself, or by an admin; the server sets the time and schedule
   // ---------------------------------------------------------------------------------------------
 
   private static String recordJsonFor(int employeeId) {
     return """
-        {"employee":{"id":%d},"startTime":"2025-05-01T09:00:00+00:00"}"""
-        .formatted(employeeId);
+        {"employee":{"id":%d}}""".formatted(employeeId);
+  }
+
+  private Schedule assignSchedule(Employee employee) {
+    Schedule schedule = Schedule.builder().id(7).name("Morning").build();
+    employee.setSchedule(schedule);
+    given(employeeRepository.findById(employee.getId())).willReturn(Optional.of(employee));
+    return schedule;
+  }
+
+  private ResultActions postRecord(Employee caller, String json) throws Exception {
+    return mockMvc.perform(
+        post("/api/records")
+            .header(HttpHeaders.AUTHORIZATION, bearer(caller))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json));
+  }
+
+  @Test
+  void checkIn_ignoresTimeAndScheduleSentByTheClient() throws Exception {
+    Schedule ownSchedule = assignSchedule(user);
+    given(recordService.saveRecord(any(Record.class)))
+        .willAnswer(invocation -> invocation.getArgument(0));
+    Instant before = Instant.now();
+
+    postRecord(
+            user,
+            """
+            {"employee":{"id":1},"startTime":"2025-05-01T09:00:00+00:00",
+             "schedule":{"id":99,"startTime":"03:00:00+00:00"}}""")
+        .andExpect(status().isCreated());
+
+    ArgumentCaptor<Record> saved = ArgumentCaptor.forClass(Record.class);
+    verify(recordService).saveRecord(saved.capture());
+    Instant checkedInAt = saved.getValue().getStartTime().toInstant();
+    assertFalse(checkedInAt.isBefore(before));
+    assertFalse(checkedInAt.isAfter(Instant.now()));
+    assertEquals(ownSchedule, saved.getValue().getSchedule());
+  }
+
+  @Test
+  void checkIn_withoutSchedule_returns400WithMessage() throws Exception {
+    given(employeeRepository.findById(1)).willReturn(Optional.of(user));
+
+    postRecord(user, recordJsonFor(1))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value("No schedule assigned"));
+    verify(recordService, never()).saveRecord(any());
+  }
+
+  @Test
+  void checkIn_outsideTheWindow_returns400WithMessage() throws Exception {
+    assignSchedule(user);
+    given(recordService.isPostedOutOfTime(any(Record.class))).willReturn(true);
+
+    postRecord(user, recordJsonFor(1))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.message")
+                .value("You can only check in up to 60 minutes after your start time"));
+    verify(recordService, never()).saveRecord(any());
   }
 
   @Test
@@ -752,6 +811,7 @@ public class SecurityRulesTests {
 
   @Test
   void user_postOwnRecord_returns201() throws Exception {
+    assignSchedule(user);
     given(recordService.saveRecord(any(Record.class)))
         .willReturn(Record.builder().id(10).employee(user).build());
 
@@ -766,6 +826,7 @@ public class SecurityRulesTests {
 
   @Test
   void admin_postRecordForOtherEmployee_returns201() throws Exception {
+    assignSchedule(other);
     given(recordService.saveRecord(any(Record.class)))
         .willReturn(Record.builder().id(11).employee(other).build());
 
