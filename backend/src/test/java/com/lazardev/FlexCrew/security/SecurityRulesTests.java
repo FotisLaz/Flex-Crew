@@ -68,6 +68,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
  * Proves the authorization rules against the REAL security setup: {@link SecurityConfiguration},
@@ -904,5 +906,55 @@ class SecurityRulesTests {
   void tokensIssuedInTheSameSecond_areUnique() {
     assertNotEquals(jwtService.generateRefreshToken(user), jwtService.generateRefreshToken(user));
     assertNotEquals(jwtService.generateToken(user), jwtService.generateToken(user));
+  }
+
+  private ResultActions refresh(String authHeader) throws Exception {
+    MockHttpServletRequestBuilder request = post("/api/auth/refresh-token");
+    if (authHeader != null) {
+      request.header(HttpHeaders.AUTHORIZATION, authHeader);
+    }
+    return mockMvc.perform(request);
+  }
+
+  @Test
+  void refreshToken_withoutHeader_returns401() throws Exception {
+    refresh(null).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void refreshToken_withNonBearerHeader_returns401() throws Exception {
+    refresh("Basic dXNlcjpwYXNz").andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void refreshToken_malformed_returns401() throws Exception {
+    refresh("Bearer not-a-jwt").andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void refreshToken_expired_returns401() throws Exception {
+    given(employeeRepository.findByEmail(user.getEmail())).willReturn(Optional.of(user));
+
+    refresh("Bearer " + signedToken(user.getEmail(), TEST_KEY, -60_000))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void refreshToken_signedWithAnotherKey_returns401() throws Exception {
+    String otherKey =
+        Base64.getEncoder()
+            .encodeToString("an-attacker-key-that-is-long-enough-for-hs256!!".getBytes());
+    given(employeeRepository.findByEmail(user.getEmail())).willReturn(Optional.of(user));
+
+    refresh("Bearer " + signedToken(user.getEmail(), otherKey, 60_000))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void refreshToken_forUnknownUser_returns401() throws Exception {
+    given(employeeRepository.findByEmail("deleted@test.local")).willReturn(Optional.empty());
+
+    refresh("Bearer " + signedToken("deleted@test.local", TEST_KEY, 60_000))
+        .andExpect(status().isUnauthorized());
   }
 }
