@@ -20,7 +20,6 @@
     "boxicons": "^2.1.4",
     "chart.js": "^4.4.3",
     "clsx": "^2.1.1",
-    "FlexCrew-webapp": "file:",
     "framer-motion": "^11.0.20",
     "moment": "^2.30.1",
     "react": "^18.2.0",
