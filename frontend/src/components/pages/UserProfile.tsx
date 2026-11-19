@@ -76,7 +76,7 @@ const UserProfile = () => {
 
   const getFullName = (emp: Employee | null) => {
     if (!emp) return 'N/A';
-    return `${emp.names} ${emp.firstSurname} ${emp.secondSurname}`.trim();
+    return [emp.names, emp.firstSurname, emp.secondSurname].filter(Boolean).join(" ");
   };
 
   const openChangePasswordModal = () => {

@@ -68,7 +68,7 @@ export const Employees = ({ searchFilter = '' }: EmployeesProps) => {
 
   // Get full name of employee
   const getFullName = (employee: Employee) => {
-    return `${employee.names} ${employee.firstSurname} ${employee.secondSurname}`.trim();
+    return [employee.names, employee.firstSurname, employee.secondSurname].filter(Boolean).join(" ");
   };
 
   // Filter employees based on search term

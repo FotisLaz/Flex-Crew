@@ -6,7 +6,7 @@ export interface Employee {
   id: number;
   names: string;
   firstSurname: string;
-  secondSurname: string;
+  secondSurname: string | null;
   email: string;
   imageUrl: string;
   team: Team;
