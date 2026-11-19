@@ -46,17 +46,6 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidt
           {children}
         </div>
       </div>
-      
-      {/* Basic Tailwind Animation - Add this to your global CSS or tailwind.config.js */}
-      <style jsx global>{`
-        @keyframes modal-fade-in {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        .animate-modal-fade-in {
-          animation: modal-fade-in 0.2s ease-out forwards;
-        }
-      `}</style>
     </div>
   );
 };

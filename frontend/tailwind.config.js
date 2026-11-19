@@ -10,6 +10,15 @@ export default {
         "yellow-FlexCrew": "#EBB200",
         "black-stone": "#0C0B0B",
       },
+      keyframes: {
+        "modal-fade-in": {
+          from: { opacity: "0", transform: "scale(0.95)" },
+          to: { opacity: "1", transform: "scale(1)" },
+        },
+      },
+      animation: {
+        "modal-fade-in": "modal-fade-in 0.2s ease-out forwards",
+      },
     },
   },
   plugins: [],
