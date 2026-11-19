@@ -8,7 +8,7 @@ import useApiPrivate from "../../hooks/useApiPrivate";
 import { getErrorMessage } from "../../api/getErrorMessage";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { FaUsers, FaUserCheck, FaExclamationTriangle as FaExclamationTriangleIcon, FaCalendarAlt, FaCoffee, FaCalendarWeek, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaUsers, FaExclamationTriangle as FaExclamationTriangleIcon, FaCalendarAlt, FaCalendarWeek, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 // Helper function to count employees per team
 const countEmployeesByTeam = (employees: Employee[]) => {
@@ -27,7 +27,7 @@ const MainPanel = () => {
   const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [currentDateState, setCurrentDateState] = useState(new Date(2025, 4, 1)); // May 2025
+  const [currentDateState, setCurrentDateState] = useState(() => new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -87,12 +87,6 @@ const MainPanel = () => {
     return currentEmployee?.managedTeam ? 0 : allEmployees.length; 
   }, [currentEmployee, allEmployees]);
 
-  const openIssuesCount = useMemo(() => {
-    // Placeholder: filter issues relevant to the manager's team or context
-    // For now, it counts all issues. This should be refined.
-    return issues.length;
-  }, [issues]);
-
   const handleViewWeeklySchedule = () => {
     navigate('/admin/team-weekly-schedule');
   };
@@ -120,34 +114,26 @@ const MainPanel = () => {
         <p className="text-gray-600 mt-1">Here's an overview of your team's current status.</p>
         </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-6">
         <InfoCard
           icon={<FaUsers className="text-blue-600" size={28} />}
-          title="Managed Employees"
+          title={currentEmployee?.managedTeam ? "Managed Employees" : "Employees"}
           value={currentEmployee ? managedEmployeesCount.toString() : 'N/A'}
           bgColor="bg-blue-50"
           textColor="text-blue-800"
           borderColor="border-blue-200"
         />
         <InfoCard
-          icon={<FaUserCheck className="text-green-600" size={28} />}
-          title="Active Now"
-          value="--" // Placeholder
-          bgColor="bg-green-50"
-          textColor="text-green-800"
-          borderColor="border-green-200"
-        />
-        <InfoCard
           icon={<FaExclamationTriangleIcon className="text-red-600" size={28} />}
-          title="Pending Issues"
-          value={openIssuesCount.toString()}
+          title="Recorded Issues"
+          value={issues.length.toString()}
           bgColor="bg-red-50"
           textColor="text-red-800"
           borderColor="border-red-200"
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6">
         <div className="bg-white p-4 rounded-xl shadow-lg flex items-center space-x-4 border-l-4 border-purple-500">
           <FaCalendarAlt size={32} className="text-purple-600" />
           <div>
@@ -156,21 +142,17 @@ const MainPanel = () => {
             {currentEmployee?.schedule && <p className="text-xs text-gray-400">{currentEmployee.schedule.startTime} - {currentEmployee.schedule.endTime}</p>}
           </div>
         </div>
-        <div className="bg-white p-4 rounded-xl shadow-lg flex items-center space-x-4 border-l-4 border-orange-500">
-          <FaCoffee size={32} className="text-orange-600" />
-          <div>
-            <p className="text-sm text-gray-500">Next Break Time</p>
-            <p className="text-lg font-semibold text-gray-800">14:30 - 15:30</p> {/* Placeholder */}
+        {/* The team schedule page is admin-only; for anyone else this tile would just bounce back. */}
+        {authContext.userRole === "ADMIN" && (
+          <div
+            onClick={handleViewWeeklySchedule}
+            className="bg-indigo-600 text-white p-4 rounded-xl shadow-lg hover:bg-indigo-700 transition-all duration-300 ease-in-out cursor-pointer flex flex-col items-center justify-center text-center transform hover:scale-105"
+          >
+            <FaCalendarWeek size={32} className="mb-2" />
+            <h3 className="text-lg font-semibold">View Weekly Schedule</h3>
+            <p className="text-sm opacity-90">Check team availability</p>
           </div>
-        </div>
-        <div 
-          onClick={handleViewWeeklySchedule}
-          className="bg-indigo-600 text-white p-4 rounded-xl shadow-lg hover:bg-indigo-700 transition-all duration-300 ease-in-out cursor-pointer flex flex-col items-center justify-center text-center transform hover:scale-105"
-        >
-          <FaCalendarWeek size={32} className="mb-2" />
-          <h3 className="text-lg font-semibold">View Weekly Schedule</h3>
-          <p className="text-sm opacity-90">Check team availability</p>
-        </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6">
@@ -232,7 +214,6 @@ const MainPanel = () => {
             </div>
             
             <div className="grid grid-cols-7 gap-1">
-              {/* Placeholder for empty days at the start of the month */}
               {Array.from({ length: moment(currentDateState).startOf('month').day() }).map((_, i) => (
                 <div key={`empty-start-${i}`} className="h-8 w-full"></div>
               ))}
@@ -242,12 +223,11 @@ const MainPanel = () => {
                 return (
                   <div 
                     key={day}
-                    className={`h-8 rounded-full flex items-center justify-center cursor-pointer text-xs sm:text-sm transition-all duration-200 ${ 
-                      isToday 
-                        ? 'bg-yellow-400 text-black font-bold shadow-md' 
-                        : 'hover:bg-gray-200'
+                    className={`h-8 rounded-full flex items-center justify-center text-xs sm:text-sm ${
+                      isToday
+                        ? 'bg-yellow-400 text-black font-bold shadow-md'
+                        : ''
                     }`}
-                    onClick={() => console.log(`Selected day: ${day}`)}
                   >
                     {day}
                   </div>
