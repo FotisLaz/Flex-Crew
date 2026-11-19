@@ -1,9 +1,7 @@
 import axios from 'axios';
 import { attachRefreshOn401 } from '../../api/axiosConfig';
 
-// IMPORTANT: Adjust this URL to match your backend server's address and base path
-// Example: If your backend runs on port 8080 and uses /api as base, change to "http://localhost:8080/api"
-const BASE_URL = 'http://localhost:8081/api/v1'; // Assuming port 8081 and /api/v1 base path
+const BASE_URL = '/api/v1';
 
 /**
  * Default Axios instance for public API calls.

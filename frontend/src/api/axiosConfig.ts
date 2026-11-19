@@ -1,15 +1,11 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import { AuthResponse } from "../types/AuthResponse";
 
-const BASE_URL = "http://localhost:8081";
-
-const api = axios.create({
-  baseURL: BASE_URL,
-});
+// Requests go to the page's own origin: Vite (dev) and nginx (Docker) proxy /api to the backend.
+const api = axios.create();
 
 // Attach interceptor to this api
 export const apiPrivate = axios.create({
-  baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });
