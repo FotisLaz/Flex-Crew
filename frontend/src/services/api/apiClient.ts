@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { attachRefreshOn401 } from '../../api/axiosConfig';
 
 // IMPORTANT: Adjust this URL to match your backend server's address and base path
 // Example: If your backend runs on port 8080 and uses /api as base, change to "http://localhost:8080/api"
@@ -43,9 +44,7 @@ apiPrivate.interceptors.request.use(
     }
 );
 
-// You might add interceptors here later to handle token attachment and refreshing
-// apiClient.interceptors.request.use(...)
-// apiPrivate.interceptors.response.use(...)
+attachRefreshOn401(apiPrivate);
 
 
 export default apiClient; // Export the default instance primarily 
