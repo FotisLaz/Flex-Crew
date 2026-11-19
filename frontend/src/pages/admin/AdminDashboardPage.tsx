@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { getPunctualityStats, getScheduleLoadStats } from '@/services/api/analyticsService'; // Adjust import path
-import PunctualityPieChart from '@/components/charts/PunctualityPieChart'; // Adjust import path
-import ScheduleLoadBarChart from '@/components/charts/ScheduleLoadBarChart'; // Adjust import path
-import { PunctualityStatsDto, ScheduleLoadDto } from '@/types'; // Adjust import path
+import { getPunctualityStats, getScheduleLoadStats } from '@/services/api/analyticsService';
+import PunctualityPieChart from '@/components/charts/PunctualityPieChart';
+import ScheduleLoadBarChart from '@/components/charts/ScheduleLoadBarChart';
+import { PunctualityStatsDto, ScheduleLoadDto } from '@/types';
 import { getErrorMessage } from '../../api/getErrorMessage';
-// import { useAuth } from '@/hooks/useAuth'; // Assuming you have an auth hook
+import useApiPrivate from '@/hooks/useApiPrivate';
 
 const AdminDashboardPage: React.FC = () => {
-    // const { user } = useAuth(); // Get user info to ensure ADMIN role (or handle in routing)
+    const apiPrivate = useApiPrivate();
 
     const [punctualityData, setPunctualityData] = useState<PunctualityStatsDto | null>(null);
     const [scheduleLoadData, setScheduleLoadData] = useState<ScheduleLoadDto[] | null>(null);
@@ -21,7 +21,7 @@ const AdminDashboardPage: React.FC = () => {
             // Fetch Punctuality Stats
             try {
                 setPunctualityLoading(true);
-                const pData = await getPunctualityStats();
+                const pData = await getPunctualityStats(apiPrivate);
                 setPunctualityData(pData);
                 setPunctualityError(null);
             } catch (err) {
@@ -34,7 +34,7 @@ const AdminDashboardPage: React.FC = () => {
             // Fetch Schedule Load Stats
             try {
                 setScheduleLoadLoading(true);
-                const sData = await getScheduleLoadStats();
+                const sData = await getScheduleLoadStats(apiPrivate);
                 setScheduleLoadData(sData);
                 setScheduleLoadError(null);
             } catch (err) {
@@ -46,12 +46,7 @@ const AdminDashboardPage: React.FC = () => {
         };
 
         fetchData();
-    }, []);
-
-    // Optional: Add a check here to ensure only ADMINs see this page, if not handled by routing
-    // if (user?.role !== 'ADMIN') {
-    //     return <p>Access Denied. You must be an admin to view this page.</p>;
-    // }
+    }, [apiPrivate]);
 
     return (
         <div className="container mx-auto p-4">

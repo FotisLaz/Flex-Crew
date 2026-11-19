@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Project } from '../types/projectTypes';
 import { projectService } from '../services/projectService';
 import { getErrorMessage } from '../api/getErrorMessage';
+import useApiPrivate from '../hooks/useApiPrivate';
 import ProjectCard from '../components/projects/ProjectCard';
 // import { Link } from 'react-router-dom'; // For a "Create New Project" button
 
@@ -9,12 +10,13 @@ const ProjectsListPage: React.FC = () => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const apiPrivate = useApiPrivate();
 
     useEffect(() => {
         const fetchProjects = async () => {
             try {
                 setLoading(true);
-                const data = await projectService.getAllProjects();
+                const data = await projectService.getAllProjects(apiPrivate);
                 // Ensure data is an array before setting projects
                 setProjects(Array.isArray(data) ? data : []);
                 setError(null);
@@ -28,7 +30,7 @@ const ProjectsListPage: React.FC = () => {
         };
 
         fetchProjects();
-    }, []);
+    }, [apiPrivate]);
 
     if (loading) return <p>Loading projects...</p>;
     // Keep the error check, but it might be more robust to check if projects is empty *after* error is null

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { projectService } from '../services/projectService';
 import { getErrorMessage } from '../api/getErrorMessage';
+import useApiPrivate from '../hooks/useApiPrivate';
 import {
     Project,
     ProjectAssignmentSuggestionDTO,
@@ -15,6 +16,7 @@ const ProjectDetailsPage: React.FC = () => {
     const [suggestions, setSuggestions] = useState<ProjectAssignmentSuggestionDTO | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const apiPrivate = useApiPrivate();
 
     useEffect(() => {
         if (!projectId) {
@@ -32,9 +34,9 @@ const ProjectDetailsPage: React.FC = () => {
                     setLoading(false);
                     return;
                 }
-                const projectData = await projectService.getProjectById(id);
+                const projectData = await projectService.getProjectById(apiPrivate, id);
                 setProject(projectData);
-                const suggestionData = await projectService.getAssignmentSuggestions(id);
+                const suggestionData = await projectService.getAssignmentSuggestions(apiPrivate, id);
                 setSuggestions(suggestionData);
                 setError(null);
             } catch (err) {
@@ -46,7 +48,7 @@ const ProjectDetailsPage: React.FC = () => {
         };
 
         fetchProjectData();
-    }, [projectId]);
+    }, [projectId, apiPrivate]);
 
     if (loading) return <p>Loading project details...</p>;
     if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;

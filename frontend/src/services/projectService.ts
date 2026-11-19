@@ -1,10 +1,5 @@
+import { AxiosInstance } from 'axios';
 import { Project, ProjectAssignmentSuggestionDTO, ProjectFormData } from '../types/projectTypes';
-import { apiPrivate } from './api/apiClient'; // the client that sends the access token
-
-// Ensure that VITE_API_BASE_URL is treated as unset if it's an empty string, then fallback to /api/v1
-// const envApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-// const API_BASE_URL = envApiBaseUrl && envApiBaseUrl.trim() !== '' ? envApiBaseUrl : '/api/v1';
-// API_BASE_URL will be handled by the apiClient
 
 // Helper function for handling API responses (adapted for Axios)
 async function handleResponse<T>(response: { data: T; status: number }): Promise<T> {
@@ -15,29 +10,30 @@ async function handleResponse<T>(response: { data: T; status: number }): Promise
     return response.data;
 }
 
+// Callers pass the client from useApiPrivate(), which attaches the access token.
 export const projectService = {
-    async getAllProjects(): Promise<Project[]> {
-        const response = await apiPrivate.get('/projects');
+    async getAllProjects(api: AxiosInstance): Promise<Project[]> {
+        const response = await api.get('/api/v1/projects');
         return handleResponse<Project[]>(response);
     },
 
-    async getProjectById(projectId: number): Promise<Project> {
-        const response = await apiPrivate.get(`/projects/${projectId}`);
+    async getProjectById(api: AxiosInstance, projectId: number): Promise<Project> {
+        const response = await api.get(`/api/v1/projects/${projectId}`);
         return handleResponse<Project>(response);
     },
 
-    async createProject(projectData: ProjectFormData): Promise<Project> {
-        const response = await apiPrivate.post('/projects', projectData);
+    async createProject(api: AxiosInstance, projectData: ProjectFormData): Promise<Project> {
+        const response = await api.post('/api/v1/projects', projectData);
         return handleResponse<Project>(response);
     },
 
-    async updateProject(projectId: number, projectData: Partial<ProjectFormData>): Promise<Project> {
-        const response = await apiPrivate.put(`/projects/${projectId}`, projectData);
+    async updateProject(api: AxiosInstance, projectId: number, projectData: Partial<ProjectFormData>): Promise<Project> {
+        const response = await api.put(`/api/v1/projects/${projectId}`, projectData);
         return handleResponse<Project>(response);
     },
 
-    async deleteProject(projectId: number): Promise<void> {
-        const response = await apiPrivate.delete(`/projects/${projectId}`);
+    async deleteProject(api: AxiosInstance, projectId: number): Promise<void> {
+        const response = await api.delete(`/api/v1/projects/${projectId}`);
         // For delete, we might not always get data back, handle appropriately
         if (response.status === 204 || response.status === 200) { // 200 if it returns some confirmation
              return null as unknown as void; // Or just return;
@@ -46,10 +42,10 @@ export const projectService = {
         return handleResponse<void>(response);
     },
 
-    async getAssignmentSuggestions(projectId: number): Promise<ProjectAssignmentSuggestionDTO> {
-        const response = await apiPrivate.get(`/projects/${projectId}/assignment-suggestions`);
+    async getAssignmentSuggestions(api: AxiosInstance, projectId: number): Promise<ProjectAssignmentSuggestionDTO> {
+        const response = await api.get(`/api/v1/projects/${projectId}/assignment-suggestions`);
         return handleResponse<ProjectAssignmentSuggestionDTO>(response);
     },
-    
 
-}; 
+
+};
