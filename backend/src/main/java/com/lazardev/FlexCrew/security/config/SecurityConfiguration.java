@@ -41,7 +41,9 @@ public class SecurityConfiguration {
       "/swagger-ui/**",
       "/webjars/**",
       "/swagger-ui.html",
-      "/error"
+      "/error",
+      // Used by the Docker healthcheck; only the status is exposed, never details.
+      "/actuator/health"
   };
 
   @Bean
