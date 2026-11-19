@@ -50,11 +50,13 @@ import com.lazardev.FlexCrew.service.ProjectService;
 import com.lazardev.FlexCrew.service.RecordService;
 import com.lazardev.FlexCrew.service.ScheduleService;
 import com.jayway.jsonpath.JsonPath;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
@@ -978,6 +980,16 @@ class SecurityRulesTests {
     assertEquals(user, row.getEmployee());
     assertFalse(row.isRevoked());
     assertFalse(refreshTokenTable.containsKey(refreshToken), "the raw token must not be stored");
+  }
+
+  @Test
+  void refreshToken_expiresAfterSevenDays() throws Exception {
+    String refreshToken = loginAndGetRefreshToken(user);
+
+    Instant issuedAt = jwtService.extractClaim(refreshToken, Claims::getIssuedAt).toInstant();
+    Instant expiresAt = jwtService.extractClaim(refreshToken, Claims::getExpiration).toInstant();
+    assertEquals(Duration.ofDays(7), Duration.between(issuedAt, expiresAt));
+    assertEquals(expiresAt, refreshTokenTable.get(sha256Hex(refreshToken)).getExpiresAt());
   }
 
   @Test
