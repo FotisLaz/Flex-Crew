@@ -41,3 +41,35 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: npm test
+
+  docker:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_DB: flexcrew
+      POSTGRES_USER: flexcrew
+    steps:
+      - uses: actions/checkout@v5
+      - name: Generate throwaway secrets
+        run: |
+          for name in POSTGRES_PASSWORD SECRET_KEY; do
+            value=$(openssl rand -base64 32)
+            echo "::add-mask::$value"
+            echo "$name=$value" >> "$GITHUB_ENV"
+          done
+      - name: Build and start the stack
+        run: docker compose up --build --detach --wait --wait-timeout 300
+      - name: Register and log in through the frontend
+        run: |
+          curl -fsS http://localhost:5173/ -o /dev/null
+          curl -fsS http://localhost:5173/api/auth/register -o /dev/null \
+            -H 'Content-Type: application/json' \
+            -d '{"names":"CI","firstSurname":"Smoke","secondSurname":"Test","email":"ci@example.com","password":"Passw0rd!"}'
+          curl -fsS http://localhost:5173/api/auth/authenticate -o /dev/null \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"ci@example.com","password":"Passw0rd!"}'
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+      - name: Stop the stack
+        if: always()
+        run: docker compose down --volumes
