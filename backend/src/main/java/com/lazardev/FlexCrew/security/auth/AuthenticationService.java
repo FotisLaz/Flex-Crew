@@ -22,6 +22,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -119,31 +120,35 @@ public class AuthenticationService {
     tokenRepository.saveAll(validUserTokens);
   }
 
+  @Transactional
   public AuthenticationResponse refreshToken(String authHeader) {
     if (authHeader == null || !authHeader.startsWith("Bearer ")) {
       throw invalidRefreshToken(null);
     }
     String refreshToken = authHeader.substring(7);
-    Employee user;
+    RefreshToken stored;
     try {
       // Parsing checks the signature and expiry; only a token we issued and stored is accepted,
       // which also rejects access tokens sent here.
       String userEmail = jwtService.extractUsername(refreshToken);
-      RefreshToken stored =
+      stored =
           refreshTokenRepository
               .findByTokenHash(sha256(refreshToken))
               .filter(t -> t.getEmployee().getEmail().equals(userEmail))
               .orElseThrow(() -> invalidRefreshToken(null));
-      user = stored.getEmployee();
     } catch (JwtException | IllegalArgumentException e) {
       throw invalidRefreshToken(e);
     }
+    if (refreshTokenRepository.revokeIfActive(stored.getId()) == 0) {
+      throw invalidRefreshToken(null);
+    }
+    Employee user = stored.getEmployee();
     String accessToken = jwtService.generateToken(user);
     revokeAllUserTokens(user);
     saveUserToken(user, accessToken);
     return AuthenticationResponse.builder()
         .accessToken(accessToken)
-        .refreshToken(refreshToken)
+        .refreshToken(issueRefreshToken(user))
         .role(user.getRole())
         .build();
   }

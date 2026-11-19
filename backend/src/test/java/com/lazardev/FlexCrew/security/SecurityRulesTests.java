@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -154,6 +155,17 @@ class SecurityRulesTests {
     given(refreshTokenRepository.findByTokenHash(anyString()))
         .willAnswer(
             invocation -> Optional.ofNullable(refreshTokenTable.get(invocation.getArgument(0))));
+    given(refreshTokenRepository.revokeIfActive(anyInt()))
+        .willAnswer(
+            invocation -> {
+              for (RefreshToken row : refreshTokenTable.values()) {
+                if (row.getId().equals(invocation.getArgument(0)) && !row.isRevoked()) {
+                  row.setRevoked(true);
+                  return 1;
+                }
+              }
+              return 0;
+            });
   }
 
   private static Employee employee(int id, String email, Role role) {
@@ -997,6 +1009,32 @@ class SecurityRulesTests {
     refresh("Bearer " + loginAndGetRefreshToken(user))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.access_token").isNotEmpty());
+  }
+
+  private String refreshAndGetNewRefreshToken(String refreshToken) throws Exception {
+    MvcResult result =
+        refresh("Bearer " + refreshToken).andExpect(status().isOk()).andReturn();
+    return JsonPath.read(result.getResponse().getContentAsString(), "$.refresh_token");
+  }
+
+  @Test
+  void refreshToken_returnsANewRefreshTokenAndRevokesTheOldOne() throws Exception {
+    String first = loginAndGetRefreshToken(user);
+
+    String second = refreshAndGetNewRefreshToken(first);
+
+    assertNotEquals(first, second);
+    assertTrue(refreshTokenTable.get(sha256Hex(first)).isRevoked());
+    assertFalse(refreshTokenTable.get(sha256Hex(second)).isRevoked());
+    refresh("Bearer " + second).andExpect(status().isOk());
+  }
+
+  @Test
+  void refreshToken_usedTwice_secondUseReturns401() throws Exception {
+    String first = loginAndGetRefreshToken(user);
+    refreshAndGetNewRefreshToken(first);
+
+    refresh("Bearer " + first).andExpect(status().isUnauthorized());
   }
 
   @Test
