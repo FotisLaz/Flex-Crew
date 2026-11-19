@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Schedule } from '../../types/Schedule';
+import { Schedule } from '../../../types/Schedule';
 import useApiPrivate from '../../../hooks/useApiPrivate';
 import { BsPlusCircle, BsPencilSquare, BsTrash, BsClock, BsPeople } from 'react-icons/bs';
 import Grid from '../../common/Grid';
