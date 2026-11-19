@@ -7,6 +7,7 @@ import io.jsonwebtoken.security.Keys;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,6 +51,9 @@ public class JwtService {
       Map<String, Object> extraClaims, UserDetails userDetails, long expiration) {
     return Jwts.builder()
         .claims(extraClaims)
+        // A unique id (jti): without it, two tokens for the same user issued in the same second
+        // are identical, because iat and exp only have second precision.
+        .id(UUID.randomUUID().toString())
         .subject(userDetails.getUsername())
         .issuedAt(new Date(System.currentTimeMillis()))
         .expiration(new Date(System.currentTimeMillis() + expiration))

@@ -1,6 +1,7 @@
 package com.lazardev.FlexCrew.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -896,5 +897,12 @@ class SecurityRulesTests {
     ArgumentCaptor<Token> savedToken = ArgumentCaptor.forClass(Token.class);
     verify(tokenRepository).save(savedToken.capture());
     assertEquals(user, savedToken.getValue().getEmployee());
+  }
+
+  /** iat/exp have second precision, so without a jti two tokens in one second were identical. */
+  @Test
+  void tokensIssuedInTheSameSecond_areUnique() {
+    assertNotEquals(jwtService.generateRefreshToken(user), jwtService.generateRefreshToken(user));
+    assertNotEquals(jwtService.generateToken(user), jwtService.generateToken(user));
   }
 }
