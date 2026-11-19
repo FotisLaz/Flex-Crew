@@ -17,9 +17,7 @@ async function handleResponse<T>(response: { data: T; status: number }): Promise
 
 export const projectService = {
     async getAllProjects(): Promise<Project[]> {
-        const urlToFetch = '/projects'; // Relative to baseURL in apiClient
-        console.log('Fetching projects from URL (using apiPrivate):', urlToFetch);
-        const response = await apiPrivate.get(urlToFetch);
+        const response = await apiPrivate.get('/projects');
         return handleResponse<Project[]>(response);
     },
 

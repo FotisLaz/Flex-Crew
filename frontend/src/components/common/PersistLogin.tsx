@@ -5,7 +5,7 @@ import useAuth from "../../hooks/useAuth";
 
 const PersistLogin = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated } = useAuth();
   // Decided once on mount: re-checking on later auth changes would start a refresh during
   // logout, before the provider has cleared the stored refresh token.
   const [shouldRefreshToken] = useState(
@@ -17,7 +17,6 @@ const PersistLogin = () => {
 
     const verifyRefreshToken = async () => {
       try {
-        console.log("Attempting to refresh token...");
         await refreshTokens();
       } catch (err) {
         console.error("Failed to refresh token:", err);
@@ -39,12 +38,6 @@ const PersistLogin = () => {
       isMounted = false;
     };
   }, [shouldRefreshToken]);
-
-  useEffect(() => {
-    console.log(`isLoading: ${isLoading}`);
-    console.log(`Access Token: ${token ? 'Yes' : 'No'}`);
-    console.log(`isAuthenticated: ${isAuthenticated}`);
-  }, [isLoading, token, isAuthenticated]);
 
   return <>{isLoading ? <p>Loading...</p> : <Outlet />}</>;
 };
