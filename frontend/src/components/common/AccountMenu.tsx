@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { BsBell, BsPersonCircle } from "react-icons/bs";
+import { BsPersonCircle } from "react-icons/bs";
 
 const AccountMenu = () => {
   const navigate = useNavigate();
@@ -10,9 +10,6 @@ const AccountMenu = () => {
 
   return (
     <div className="flex flex-row justify-end items-center gap-6 text-xl text-gray-600">
-      <button className="hover:text-yellow-FlexCrew transition-colors">
-        <BsBell />
-      </button>
       <button 
         onClick={navigateToProfile} 
         className="hover:text-yellow-FlexCrew transition-colors"
