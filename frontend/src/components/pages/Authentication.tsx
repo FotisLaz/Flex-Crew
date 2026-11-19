@@ -28,7 +28,7 @@ const Authentication = () => {
       <div className="flex flex-col flex-1 text-white gap-4 items-center justify-center">
         <img src={minimalLogo} className="w-16 h-fit" alt="Logo" />
 
-        {whichForm ? <LoginForm /> : <RegisterForm />}
+        {whichForm ? <LoginForm /> : <RegisterForm onRegistered={() => setWhichForm(true)} />}
         <div className="text-gray-500">
           {whichForm ? "Don't have an account? " : "Already registered? "}
           <a onClick={changeForm}>
