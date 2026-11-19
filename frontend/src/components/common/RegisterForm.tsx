@@ -5,6 +5,7 @@ import {
   faInfoCircle,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import axios from "axios";
 import { registerUser } from "../../services/registerUser";
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -109,10 +110,11 @@ const RegisterForm = () => {
       setSecondSurname("");
       setPwd("");
     } catch (err) {
-      console.error(err.response);
-      if (!err?.response) {
+      const response = axios.isAxiosError(err) ? err.response : undefined;
+      console.error(response);
+      if (!response) {
         setErrMsg("No Server response");
-      } else if (err.response?.status === 403) {
+      } else if (response.status === 403) {
         setErrMsg("Email taken");
       } else {
         setErrMsg("Register failed");

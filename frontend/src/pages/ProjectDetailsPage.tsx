@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { projectService } from '../services/projectService';
+import { getErrorMessage } from '../api/getErrorMessage';
 import {
     Project,
     ProjectAssignmentSuggestionDTO,
@@ -36,8 +37,8 @@ const ProjectDetailsPage: React.FC = () => {
                 const suggestionData = await projectService.getAssignmentSuggestions(id);
                 setSuggestions(suggestionData);
                 setError(null);
-            } catch (err: any) {
-                setError(err.message || 'Failed to fetch project details');
+            } catch (err) {
+                setError(getErrorMessage(err, 'Failed to fetch project details'));
                 console.error(err);
             } finally {
                 setLoading(false);

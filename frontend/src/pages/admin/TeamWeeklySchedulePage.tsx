@@ -5,6 +5,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import useApiPrivate from '../../hooks/useApiPrivate';
 import useAuth from '../../hooks/useAuth';
 import { Employee } from '../../types/Employee';
+import { getErrorMessage } from '../../api/getErrorMessage';
 
 const localizer = momentLocalizer(moment);
 
@@ -14,7 +15,7 @@ interface TeamScheduleEvent extends CalendarEvent {
   start: Date;
   end: Date;
   allDay?: boolean;
-  resource?: any; // employeeId or other details
+  resource?: number; // employeeId
 }
 
 const TeamWeeklySchedulePage: React.FC = () => {
@@ -94,9 +95,9 @@ const TeamWeeklySchedulePage: React.FC = () => {
         }
         setEvents(teamScheduleEvents);
 
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error fetching team schedule data:", err);
-        setError(`Failed to load team schedule: ${err.message || 'Please try again.'}`);
+        setError(`Failed to load team schedule: ${getErrorMessage(err, 'Please try again.')}`);
       } finally {
         setLoading(false);
       }

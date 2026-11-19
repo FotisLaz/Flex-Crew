@@ -7,6 +7,7 @@ import {
   faEyeSlash,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import axios from "axios";
 import { postAuth } from "../../services/postAuth";
 import useAuth from "../../hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -101,8 +102,8 @@ const LoginForm = () => {
       console.log("Navigating to:", from);
       // Go to the path which user came from
       navigate(from, { replace: true });
-    } catch (err: any) { // Changed type to any for broader error handling
-      if (err?.response) {
+    } catch (err) {
+      if (axios.isAxiosError<{ message?: string }>(err) && err.response) {
         // Handle specific backend errors if available
         const status = err.response.status;
         const errorData = err.response.data;
@@ -112,13 +113,13 @@ const LoginForm = () => {
         } else {
           setErrMsg(errorData?.message || "Login failed. Please try again.");
         }
-      } else if (err.request) {
+      } else if (axios.isAxiosError(err) && err.request) {
         // The request was made but no response was received
         console.error("No server response:", err.request);
         setErrMsg("No Server response. Check connection or server status.");
       } else {
         // Something happened in setting up the request that triggered an Error
-        console.error("Error setting up login request:", err.message);
+        console.error("Error setting up login request:", err);
         setErrMsg("Login Error: Could not send request.");
       }
       errRef.current?.focus();

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Project } from '../types/projectTypes';
 import { projectService } from '../services/projectService';
+import { getErrorMessage } from '../api/getErrorMessage';
 import ProjectCard from '../components/projects/ProjectCard';
 // import { Link } from 'react-router-dom'; // For a "Create New Project" button
 
@@ -17,8 +18,8 @@ const ProjectsListPage: React.FC = () => {
                 // Ensure data is an array before setting projects
                 setProjects(Array.isArray(data) ? data : []);
                 setError(null);
-            } catch (err: any) {
-                setError(err.message || 'Failed to fetch projects');
+            } catch (err) {
+                setError(getErrorMessage(err, 'Failed to fetch projects'));
                 setProjects([]); // Set to empty array on error as well
                 console.error(err);
             } finally {

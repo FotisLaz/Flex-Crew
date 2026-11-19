@@ -3,6 +3,7 @@ import { getPunctualityStats, getScheduleLoadStats } from '@/services/api/analyt
 import PunctualityPieChart from '@/components/charts/PunctualityPieChart'; // Adjust import path
 import ScheduleLoadBarChart from '@/components/charts/ScheduleLoadBarChart'; // Adjust import path
 import { PunctualityStatsDto, ScheduleLoadDto } from '@/types'; // Adjust import path
+import { getErrorMessage } from '../../api/getErrorMessage';
 // import { useAuth } from '@/hooks/useAuth'; // Assuming you have an auth hook
 
 const AdminDashboardPage: React.FC = () => {
@@ -23,9 +24,9 @@ const AdminDashboardPage: React.FC = () => {
                 const pData = await getPunctualityStats();
                 setPunctualityData(pData);
                 setPunctualityError(null);
-            } catch (err: any) {
+            } catch (err) {
                 console.error("Error fetching punctuality stats:", err);
-                setPunctualityError(err.response?.data?.message || err.message || 'Failed to load punctuality stats');
+                setPunctualityError(getErrorMessage(err, 'Failed to load punctuality stats'));
             } finally {
                 setPunctualityLoading(false);
             }
@@ -36,9 +37,9 @@ const AdminDashboardPage: React.FC = () => {
                 const sData = await getScheduleLoadStats();
                 setScheduleLoadData(sData);
                 setScheduleLoadError(null);
-            } catch (err: any) {
+            } catch (err) {
                 console.error("Error fetching schedule load stats:", err);
-                setScheduleLoadError(err.response?.data?.message || err.message || 'Failed to load schedule load stats');
+                setScheduleLoadError(getErrorMessage(err, 'Failed to load schedule load stats'));
             } finally {
                 setScheduleLoadLoading(false);
             }

@@ -6,6 +6,7 @@ import { BsPerson, BsEnvelope, BsPeople, BsCalendar, BsPencil, BsKey, BsEye, BsE
 import Grid from '../common/Grid';
 import Navbar from '../common/Navbar';
 import Modal from '../common/Modal';
+import { getErrorMessage } from '../../api/getErrorMessage';
 
 // Password validation regex (example: min 8 chars, 1 letter, 1 number)
 const PWD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
@@ -53,10 +54,10 @@ const UserProfile = () => {
              setError('Employee data not found.');
            }
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error fetching employee data:", err);
         if (isMounted) {
-           setError(err.response?.data?.message || err.message || 'Failed to fetch user profile.');
+           setError(getErrorMessage(err, 'Failed to fetch user profile.'));
         }
       } finally {
         if (isMounted) {
@@ -128,9 +129,9 @@ const UserProfile = () => {
               setIsModalOpen(false);
           }, 2000); 
 
-      } catch (err: any) {
+      } catch (err) {
           console.error("Password change error:", err);
-          setPasswordError(err.response?.data?.message || err.message || 'Failed to change password.');
+          setPasswordError(getErrorMessage(err, 'Failed to change password.'));
       } finally {
           setIsChangingPassword(false);
       }
