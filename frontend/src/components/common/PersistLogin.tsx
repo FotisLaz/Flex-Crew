@@ -6,11 +6,13 @@ import useAuth from "../../hooks/useAuth";
 const PersistLogin = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { isAuthenticated, token } = useAuth();
+  // Decided once on mount: re-checking on later auth changes would start a refresh during
+  // logout, before the provider has cleared the stored refresh token.
+  const [shouldRefreshToken] = useState(
+    () => !isAuthenticated && !!localStorage.getItem('refreshToken'),
+  );
 
   useEffect(() => {
-    // Check if we need to attempt refreshing token
-    const shouldRefreshToken = !isAuthenticated && !!localStorage.getItem('refreshToken');
-    
     let isMounted = true;
 
     const verifyRefreshToken = async () => {
@@ -36,7 +38,7 @@ const PersistLogin = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [shouldRefreshToken]);
 
   useEffect(() => {
     console.log(`isLoading: ${isLoading}`);

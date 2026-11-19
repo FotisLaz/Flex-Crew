@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Employee } from "../../types/Employee";
 import { Team } from "../../types/Team";
 import useApiPrivate from "../../hooks/useApiPrivate";
-import { useNavigate, useLocation } from "react-router-dom";
 import { BsSearch, BsPerson, BsPeople } from "react-icons/bs";
 
 interface EmployeesProps {
@@ -15,10 +14,7 @@ export const Employees = ({ searchFilter = '' }: EmployeesProps) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const apiPrivate = useApiPrivate();
-  const navigate = useNavigate();
-  const location = useLocation();
 
-  // only run in component load, empty dependency array
   useEffect(() => {
     let isMounted = true;
     const controller = new AbortController();
@@ -48,16 +44,12 @@ export const Employees = ({ searchFilter = '' }: EmployeesProps) => {
           setError(null);
         }
       } catch (err) {
-        // if the refresh token expires
-        // go to authentication and save the route to return back where you where
+        // An expired session is handled by apiPrivate's refresh, which logs out on failure so
+        // RequireAuth redirects to the login page.
         console.error(err);
         if (isMounted) {
           setError("Failed to fetch employees. Please try again.");
         }
-        navigate("/authentication", {
-          state: { from: location },
-          replace: true,
-        });
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -72,7 +64,7 @@ export const Employees = ({ searchFilter = '' }: EmployeesProps) => {
       isMounted = false;
       controller.abort();
     };
-  }, []);
+  }, [apiPrivate]);
 
   // Get full name of employee
   const getFullName = (employee: Employee) => {

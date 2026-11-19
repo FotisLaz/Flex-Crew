@@ -14,6 +14,50 @@ interface CalendarEvent {
   allDay?: boolean;
 }
 
+const processScheduleData = (schedules: Schedule[]): CalendarEvent[] => {
+  if (!schedules || schedules.length === 0) {
+    return [];
+  }
+
+  // Get next week's dates (Monday to Friday)
+  const today = new Date();
+  const nextMonday = getNextMonday(today);
+  
+  return schedules.map((schedule, index) => {
+    // Calculate the day for this schedule (index 0 = Monday, 1 = Tuesday, etc.)
+    const day = new Date(nextMonday);
+    day.setDate(day.getDate() + index);
+    
+    // Parse the start and end times and set them on the correct day
+    const startDateTime = createDateTimeFromTimeString(day, schedule.startTime);
+    const endDateTime = createDateTimeFromTimeString(day, schedule.endTime);
+    
+    return {
+      title: schedule.name,
+      start: startDateTime,
+      end: endDateTime,
+      allDay: false
+    };
+  });
+};
+
+// Helper function to get next Monday from a given date
+const getNextMonday = (date: Date): Date => {
+  const dateCopy = new Date(date);
+  const dayOfWeek = dateCopy.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const daysUntilNextMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+  dateCopy.setDate(dateCopy.getDate() + daysUntilNextMonday);
+  return dateCopy;
+};
+
+// Helper function to create a Date object from a time string (e.g., "09:00:00")
+const createDateTimeFromTimeString = (day: Date, timeString: string): Date => {
+  const [hours, minutes] = timeString.split(':').map(Number);
+  const result = new Date(day);
+  result.setHours(hours, minutes, 0, 0);
+  return result;
+};
+
 const WeeklySchedule: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -39,50 +83,6 @@ const WeeklySchedule: React.FC = () => {
 
     fetchSchedule();
   }, []);
-
-  const processScheduleData = (schedules: Schedule[]): CalendarEvent[] => {
-    if (!schedules || schedules.length === 0) {
-      return [];
-    }
-
-    // Get next week's dates (Monday to Friday)
-    const today = new Date();
-    const nextMonday = getNextMonday(today);
-    
-    return schedules.map((schedule, index) => {
-      // Calculate the day for this schedule (index 0 = Monday, 1 = Tuesday, etc.)
-      const day = new Date(nextMonday);
-      day.setDate(day.getDate() + index);
-      
-      // Parse the start and end times and set them on the correct day
-      const startDateTime = createDateTimeFromTimeString(day, schedule.startTime);
-      const endDateTime = createDateTimeFromTimeString(day, schedule.endTime);
-      
-      return {
-        title: schedule.name,
-        start: startDateTime,
-        end: endDateTime,
-        allDay: false
-      };
-    });
-  };
-
-  // Helper function to get next Monday from a given date
-  const getNextMonday = (date: Date): Date => {
-    const dateCopy = new Date(date);
-    const dayOfWeek = dateCopy.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const daysUntilNextMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
-    dateCopy.setDate(dateCopy.getDate() + daysUntilNextMonday);
-    return dateCopy;
-  };
-
-  // Helper function to create a Date object from a time string (e.g., "09:00:00")
-  const createDateTimeFromTimeString = (day: Date, timeString: string): Date => {
-    const [hours, minutes] = timeString.split(':').map(Number);
-    const result = new Date(day);
-    result.setHours(hours, minutes, 0, 0);
-    return result;
-  };
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading your schedule...</div>;
