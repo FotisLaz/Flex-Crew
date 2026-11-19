@@ -93,7 +93,7 @@ const RegisterForm = () => {
     }
 
     try {
-      const response = await registerUser(
+      await registerUser(
         email,
         names,
         firstSurname,

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { BsBell, BsPersonCircle, BsPerson } from "react-icons/bs";
+import { BsBell, BsPersonCircle } from "react-icons/bs";
 
 const AccountMenu = () => {
   const navigate = useNavigate();

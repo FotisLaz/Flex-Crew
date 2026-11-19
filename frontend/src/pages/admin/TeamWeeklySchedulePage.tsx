@@ -5,7 +5,6 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import useApiPrivate from '../../hooks/useApiPrivate';
 import useAuth from '../../hooks/useAuth';
 import { Employee } from '../../types/Employee';
-import { Schedule } from '../../types/Schedule';
 
 const localizer = momentLocalizer(moment);
 
