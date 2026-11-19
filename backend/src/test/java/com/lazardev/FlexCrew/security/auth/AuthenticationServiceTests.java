@@ -4,6 +4,7 @@ import com.lazardev.FlexCrew.dao.EmployeeRepository;
 import com.lazardev.FlexCrew.entity.Employee;
 import com.lazardev.FlexCrew.entity.Role;
 import com.lazardev.FlexCrew.security.config.JwtService;
+import com.lazardev.FlexCrew.security.token.RefreshTokenRepository;
 import com.lazardev.FlexCrew.security.token.Token;
 import com.lazardev.FlexCrew.security.token.TokenRepository;
 import com.lazardev.FlexCrew.security.token.TokenType;
@@ -20,11 +21,13 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +37,8 @@ class AuthenticationServiceTests {
     private EmployeeRepository employeeRepository;
     @Mock
     private TokenRepository tokenRepository;
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
     @Mock
     private PasswordEncoder passwordEncoder;
     @Mock
@@ -85,6 +90,7 @@ class AuthenticationServiceTests {
         when(employeeRepository.save(any(Employee.class))).thenReturn(employee); // Return the employee with an ID
         when(jwtService.generateToken(any(Employee.class))).thenReturn("accessToken");
         when(jwtService.generateRefreshToken(any(Employee.class))).thenReturn("refreshToken");
+        when(jwtService.extractClaim(eq("refreshToken"), any())).thenReturn(new Date());
 
         AuthenticationResponse response = authenticationService.register(registerRequest);
 
@@ -126,6 +132,7 @@ class AuthenticationServiceTests {
         when(employeeRepository.findByEmail(authRequest.getEmail())).thenReturn(Optional.of(employee));
         when(jwtService.generateToken(employee)).thenReturn("newAccessToken");
         when(jwtService.generateRefreshToken(employee)).thenReturn("newRefreshToken");
+        when(jwtService.extractClaim(eq("newRefreshToken"), any())).thenReturn(new Date());
 
         // Mock finding valid old tokens
         Token oldToken1 = Token.builder().id(1).token("oldAccess").employee(employee).expired(false).revoked(false).build();

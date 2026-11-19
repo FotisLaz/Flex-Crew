@@ -4,10 +4,17 @@ import com.lazardev.FlexCrew.dao.EmployeeRepository;
 import com.lazardev.FlexCrew.entity.Employee;
 import com.lazardev.FlexCrew.entity.Role;
 import com.lazardev.FlexCrew.security.config.JwtService;
+import com.lazardev.FlexCrew.security.token.RefreshToken;
+import com.lazardev.FlexCrew.security.token.RefreshTokenRepository;
 import com.lazardev.FlexCrew.security.token.Token;
 import com.lazardev.FlexCrew.security.token.TokenRepository;
 import com.lazardev.FlexCrew.security.token.TokenType;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,6 +29,7 @@ public class AuthenticationService {
 
   private EmployeeRepository repository;
   private TokenRepository tokenRepository;
+  private RefreshTokenRepository refreshTokenRepository;
   private PasswordEncoder passwordEncoder;
   private JwtService jwtService;
   private AuthenticationManager authenticationManager;
@@ -30,11 +38,13 @@ public class AuthenticationService {
   public AuthenticationService(
       EmployeeRepository theEmployeeRepo,
       TokenRepository theTokenRepo,
+      RefreshTokenRepository theRefreshTokenRepo,
       PasswordEncoder thePasswordEncoder,
       JwtService theJwtservice,
       AuthenticationManager theAuthenticationManager) {
     this.repository = theEmployeeRepo;
     this.tokenRepository = theTokenRepo;
+    this.refreshTokenRepository = theRefreshTokenRepo;
     this.passwordEncoder = thePasswordEncoder;
     this.jwtService = theJwtservice;
     this.authenticationManager = theAuthenticationManager;
@@ -55,7 +65,7 @@ public class AuthenticationService {
 
     Employee savedUser = repository.save(user);
     String jwtToken = jwtService.generateToken(user);
-    String refreshToken = jwtService.generateRefreshToken(user);
+    String refreshToken = issueRefreshToken(savedUser);
     saveUserToken(savedUser, jwtToken);
     return AuthenticationResponse.builder()
         .accessToken(jwtToken)
@@ -69,7 +79,7 @@ public class AuthenticationService {
         new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
     Employee user = repository.findByEmail(request.getEmail()).orElseThrow();
     String jwtToken = jwtService.generateToken(user);
-    String refreshToken = jwtService.generateRefreshToken(user);
+    String refreshToken = issueRefreshToken(user);
     revokeAllUserTokens(user);
     saveUserToken(user, jwtToken);
     return AuthenticationResponse.builder()
@@ -116,11 +126,15 @@ public class AuthenticationService {
     String refreshToken = authHeader.substring(7);
     Employee user;
     try {
+      // Parsing checks the signature and expiry; only a token we issued and stored is accepted,
+      // which also rejects access tokens sent here.
       String userEmail = jwtService.extractUsername(refreshToken);
-      user = repository.findByEmail(userEmail).orElseThrow(() -> invalidRefreshToken(null));
-      if (!jwtService.isTokenValid(refreshToken, user)) {
-        throw invalidRefreshToken(null);
-      }
+      RefreshToken stored =
+          refreshTokenRepository
+              .findByTokenHash(sha256(refreshToken))
+              .filter(t -> t.getEmployee().getEmail().equals(userEmail))
+              .orElseThrow(() -> invalidRefreshToken(null));
+      user = stored.getEmployee();
     } catch (JwtException | IllegalArgumentException e) {
       throw invalidRefreshToken(e);
     }
@@ -132,6 +146,30 @@ public class AuthenticationService {
         .refreshToken(refreshToken)
         .role(user.getRole())
         .build();
+  }
+
+  private String issueRefreshToken(Employee user) {
+    String refreshToken = jwtService.generateRefreshToken(user);
+    refreshTokenRepository.save(
+        RefreshToken.builder()
+            .employee(user)
+            .tokenHash(sha256(refreshToken))
+            .expiresAt(jwtService.extractClaim(refreshToken, Claims::getExpiration).toInstant())
+            .revoked(false)
+            .build());
+    return refreshToken;
+  }
+
+  // A fast, unsalted hash is enough: the token is long and random, so it can't be brute-forced,
+  // and the same input must give the same hash so the token can be looked up by it (BCrypt can't).
+  private static String sha256(String token) {
+    try {
+      byte[] hash =
+          MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
+      return HexFormat.of().formatHex(hash);
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 is not available", e);
+    }
   }
 
   private static ResponseStatusException invalidRefreshToken(Throwable cause) {
